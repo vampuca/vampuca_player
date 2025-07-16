@@ -752,8 +752,8 @@
 
     <script>
         // Application state
-        let currentSlide = 0; // Start with title (0), then chapters 1-21, then end (22)
-        let totalSlides = 23; // Title + 21 chapters + End
+        let currentSlide = 0; // Start with title (0), then chapters 1-19, then end (20)
+        let totalSlides = 21; // Title + 19 chapters + End
         let isPlaying = false;
         let isFullscreen = false;
         let controlsTimeout;
@@ -792,29 +792,27 @@
 
         // Video data with title, chapters, and end
         const videoData = [
-            { title: "Title", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_title.m4v" },
-            { title: "Chapter 1", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT1.m4v" },
-            { title: "Chapter 2", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT2.m4v" },
-            { title: "Chapter 3", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT3.m4v" },
-            { title: "Chapter 4", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT4.m4v" },
-            { title: "Chapter 5", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT5.m4v" },
-            { title: "Chapter 6", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT6.m4v" },
-            { title: "Chapter 7", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT7.m4v" },
-            { title: "Chapter 8", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT8.m4v" },
-            { title: "Chapter 9", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT9.m4v" },
-            { title: "Chapter 10", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT10.m4v" },
-            { title: "Chapter 11", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT11.m4v" },
-            { title: "Chapter 12", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT12.m4v" },
-            { title: "Chapter 13", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT13.m4v" },
-            { title: "Chapter 14", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT14.m4v" },
-            { title: "Chapter 15", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT15.m4v" },
-            { title: "Chapter 16", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT16.m4v" },
-            { title: "Chapter 17", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT17.m4v" },
-            { title: "Chapter 18", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT18.m4v" },
-            { title: "Chapter 19", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT19.m4v" },
-            { title: "Chapter 20", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT20.m4v" },
-            { title: "Chapter 21", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT21.m4v" },
-            { title: "End", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_end.m4v" }
+            { title: "Title", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT%20title.m4v" },
+            { title: "Chapter 1", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_1.m4v" },
+            { title: "Chapter 2", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_2.m4v" },
+            { title: "Chapter 3", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_3.m4v" },
+            { title: "Chapter 4", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_4.m4v" },
+            { title: "Chapter 5", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_5.m4v" },
+            { title: "Chapter 6", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_6.m4v" },
+            { title: "Chapter 7", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_7.m4v" },
+            { title: "Chapter 8", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_8.m4v" },
+            { title: "Chapter 9", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_9.m4v" },
+            { title: "Chapter 10", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_10.m4v" },
+            { title: "Chapter 11", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_11.m4v" },
+            { title: "Chapter 12", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_12.m4v" },
+            { title: "Chapter 13", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_13.m4v" },
+            { title: "Chapter 14", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_14.m4v" },
+            { title: "Chapter 15", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_15.m4v" },
+            { title: "Chapter 16", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_16.m4v" },
+            { title: "Chapter 17", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_17.m4v" },
+            { title: "Chapter 18", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_18.m4v" },
+            { title: "Chapter 19", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT_19.m4v" },
+            { title: "End", videoUrl: "https://github.com/vampuca/vampuca_player/raw/main/KLKT%20end.m4v" }
         ];
 
         // Load video frame instantly with auto-play
