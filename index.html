@@ -1,59 +1,1281 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Vampuca AI Graphic Novel Player</title>
-  <meta name="description" content="Vampuca AI interactive graphic novel player with chapters">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/purecss/2.1.0/pure-min.css" />
-  <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
-  <style>
-    body, html { margin:0; padding:0; height:100%; overflow:hidden; background:#000; color:#fff; font-family:sans-serif; }
-    #playerContainer { position:relative; width:100vw; height:100vh; background:#000; }
-    .plyr__video-wrapper { width:100%; height:100%; }
-    #controls { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); display:flex; gap:12px; z-index:10; }
-    button { background:rgba(0,0,0,0.6); border:none; color:#fff; padding:8px 12px; cursor:pointer; border-radius:4px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vampuca AI Graphic Novel Player</title>
+    <meta name="description" content="Vampuca AI interactive graphic novel player with 21 immersive video chapters">
+    <meta property="og:title" content="Vampuca AI Graphic Novel">
+    <meta property="og:description" content="Experience the interactive graphic novel with seamless video navigation">
+    <meta property="og:type" content="website">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: black;
+            color: white;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .player-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: black;
+        }
+
+        .studio-branding {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .studio-brand-block {
+            background: rgba(0,0,0,0.7);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,133,51,0.2);
+        }
+
+        .dropdown-button-container {
+            background: rgba(0,0,0,0.7);
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,133,51,0.2);
+        }
+
+        .studio-name {
+            color: hsl(14,100%,60%);
+            font-weight: 700;
+            font-size: 1.125rem;
+            letter-spacing: 0.05em;
+            text-shadow: 0 0 10px rgba(255,133,51,0.3);
+        }
+
+        .dropdown-button {
+            background: none;
+            border: none;
+            color: hsl(14,100%,60%);
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            transition: all 0.2s ease;
+        }
+
+        .dropdown-button:hover {
+            color: white;
+            background: rgba(255,133,51,0.1);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            width: 12rem;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(16px);
+            border-radius: 0.5rem;
+            border: 1px solid rgba(0,0,0,0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            max-height: 24rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .dropdown-menu.hidden {
+            display: none;
+        }
+
+        .dropdown-header {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            color: hsl(14,100%,60%);
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .chapter-list {
+            padding: 0.5rem;
+        }
+
+        .chapter-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: none;
+            background: none;
+            color: #374151;
+            cursor: pointer;
+            border-radius: 0.375rem;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+        }
+
+        .chapter-item:hover {
+            background: rgba(255,133,51,0.1);
+            color: hsl(14,100%,60%);
+        }
+
+        .chapter-item.active {
+            background: rgba(255,133,51,0.2);
+            color: hsl(14,100%,60%);
+        }
+
+        .chapter-indicator {
+            color: hsl(14,100%,60%);
+            font-size: 0.75rem;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .main-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .slide-counter {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            z-index: 50;
+            background: rgba(0,0,0,0.7);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            backdrop-filter: blur(12px);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .controls-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 50%, transparent 100%);
+            padding: 4rem 1rem 1rem;
+            transition: all 0.3s ease;
+            z-index: 40;
+        }
+
+        .controls-container.hidden {
+            opacity: 0;
+            transform: translateY(100%);
+            pointer-events: none;
+        }
+
+        .controls-panel {
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(16px);
+            border-radius: 1rem;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+
+        .controls-left, .controls-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .control-button {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            cursor: pointer;
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-button:hover:not(:disabled) {
+            color: hsl(14,100%,60%);
+            background: rgba(255,133,51,0.1);
+            border-color: rgba(255,133,51,0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255,133,51,0.2);
+        }
+
+        .control-button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .play-button {
+            background: linear-gradient(135deg, hsl(14,100%,60%) 0%, hsl(14,100%,55%) 100%) !important;
+            color: white !important;
+            padding: 1rem !important;
+            border-radius: 50% !important;
+            border: none !important;
+            box-shadow: 0 6px 20px rgba(255,133,51,0.4);
+        }
+
+        .play-button:hover {
+            background: linear-gradient(135deg, hsl(14,100%,55%) 0%, hsl(14,100%,50%) 100%) !important;
+            box-shadow: 0 8px 25px rgba(255,133,51,0.5);
+            transform: translateY(-2px) !important;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+        }
+
+        .volume-button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .volume-button:hover {
+            background: rgba(255,133,51,0.1);
+        }
+
+        .volume-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 5rem;
+            height: 0.25rem;
+            border-radius: 0.125rem;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(255,255,255,0.2);
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 1rem;
+            height: 1rem;
+            background: linear-gradient(135deg, hsl(14,100%,60%) 0%, hsl(14,100%,55%) 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(255,133,51,0.5);
+            transition: all 0.2s ease;
+        }
+
+        .volume-slider::-webkit-slider-thumb:hover {
+            box-shadow: 0 0 12px rgba(255,133,51,0.7);
+            transform: scale(1.1);
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 1rem;
+            height: 1rem;
+            background: linear-gradient(135deg, hsl(14,100%,60%) 0%, hsl(14,100%,55%) 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 8px rgba(255,133,51,0.5);
+            transition: all 0.2s ease;
+        }
+
+        .timeline-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 12rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .timeline-container.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all;
+        }
+
+        .timeline-time {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.7);
+            min-width: 2.5rem;
+            text-align: center;
+        }
+
+        .timeline-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            flex: 1;
+            height: 0.25rem;
+            border-radius: 0.125rem;
+            background: rgba(255,255,255,0.2);
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .timeline-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 0.875rem;
+            height: 0.875rem;
+            background: linear-gradient(135deg, hsl(14,100%,60%) 0%, hsl(14,100%,55%) 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(255,133,51,0.5);
+            transition: all 0.2s ease;
+        }
+
+        .timeline-slider::-webkit-slider-thumb:hover {
+            box-shadow: 0 0 12px rgba(255,133,51,0.7);
+            transform: scale(1.1);
+        }
+
+        .timeline-slider::-moz-range-thumb {
+            width: 0.875rem;
+            height: 0.875rem;
+            background: linear-gradient(135deg, hsl(14,100%,60%) 0%, hsl(14,100%,55%) 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 8px rgba(255,133,51,0.5);
+            transition: all 0.2s ease;
+        }
+
+        .fullscreen-button {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            cursor: pointer;
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fullscreen-button:hover {
+            color: hsl(14,100%,60%);
+            background: rgba(255,133,51,0.1);
+            border-color: rgba(255,133,51,0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255,133,51,0.2);
+        }
+
+        .loading-state {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            z-index: 30;
+        }
+
+        .loading-spinner {
+            width: 3rem;
+            height: 3rem;
+            border: 3px solid rgba(255,133,51,0.2);
+            border-top: 3px solid hsl(14,100%,60%);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            text-align: center;
+            color: white;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .studio-branding {
+                top: 0.5rem;
+                right: 0.5rem;
+                gap: 0.375rem;
+            }
+
+            .studio-brand-block {
+                padding: 0.375rem 0.5rem;
+            }
+
+            .dropdown-button-container {
+                padding: 0.375rem;
+            }
+
+            .studio-name {
+                font-size: 1rem;
+            }
+
+            .slide-counter {
+                top: 0.5rem;
+                left: 0.5rem;
+                padding: 0.375rem 0.75rem;
+                font-size: 0.8rem;
+            }
+
+            .controls-panel {
+                padding: 0.75rem;
+                gap: 0.75rem;
+                flex-wrap: wrap;
+            }
+
+            .controls-left, .controls-right {
+                gap: 0.5rem;
+            }
+
+            .control-button {
+                padding: 0.5rem;
+            }
+
+            .play-button {
+                padding: 0.75rem !important;
+            }
+
+            .dropdown-menu {
+                width: 10rem;
+            }
+
+            .volume-control {
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+
+            .volume-slider {
+                width: 4rem;
+            }
+
+            .timeline-container {
+                min-width: 8rem;
+            }
+
+            .timeline-time {
+                min-width: 2rem;
+                font-size: 0.7rem;
+            }
+
+            /* Mobile touch targets */
+            .control-button, .volume-button, .fullscreen-button {
+                min-width: 44px;
+                min-height: 44px;
+            }
+
+            /* Mobile fullscreen adjustments */
+            .player-container:-webkit-full-screen {
+                background: black;
+            }
+
+            .player-container:-moz-full-screen {
+                background: black;
+            }
+
+            .player-container:fullscreen {
+                background: black;
+            }
+        }
+
+        /* Fullscreen styles */
+        .player-container:-webkit-full-screen {
+            width: 100vw;
+            height: 100vh;
+            background: black;
+        }
+
+        .player-container:-moz-full-screen {
+            width: 100vw;
+            height: 100vh;
+            background: black;
+        }
+
+        .player-container:fullscreen {
+            width: 100vw;
+            height: 100vh;
+            background: black;
+        }
+
+        /* Hide scrollbars in fullscreen */
+        .player-container:-webkit-full-screen,
+        .player-container:-moz-full-screen,
+        .player-container:fullscreen {
+            overflow: hidden;
+        }
+    </style>
 </head>
-<body onload="if(/Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent)) setTimeout(()=>window.scrollTo(0,1),100);">
-  <div id="playerContainer">
-    <video id="player" playsinline webkit-playsinline controls crossorigin>
-      <source src="" type="video/mp4" />
-    </video>
-    <div id="controls">
-      <button id="prev">Prev</button>
-      <button id="next">Next</button>
-      <button id="fullscreen">⤢</button>
+<body>
+    <div class="player-container" id="playerContainer">
+        <!-- Studio Branding -->
+        <div class="studio-branding">
+            <div class="studio-brand-block">
+                <span class="studio-name">VAMPUCA AI</span>
+            </div>
+            <div class="dropdown-button-container">
+                <button class="dropdown-button" onclick="toggleDropdown()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                
+                <div id="dropdownMenu" class="dropdown-menu hidden">
+                    <div class="dropdown-header">Chapters</div>
+                    <div class="chapter-list" id="chapterList">
+                        <!-- Chapters will be generated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide Counter -->
+        <div class="slide-counter">
+            <span id="slideCounter">1 / 21</span>
+        </div>
+
+        <!-- Main Video Container -->
+        <div class="video-container" onclick="togglePlayPause()">
+            <video id="mainVideo" class="main-video" preload="metadata" playsinline webkit-playsinline muted></video>
+            
+            <!-- Loading State -->
+            <div id="loadingState" class="loading-state hidden">
+                <div>
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Loading chapter...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div id="controlsContainer" class="controls-container">
+            <div class="controls-panel">
+                <!-- Left Controls -->
+                <div class="controls-left">
+                    <button class="control-button" onclick="goBack()" title="Go Back">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m15 18-6-6 6-6"/>
+                        </svg>
+                    </button>
+
+                    <button id="playButton" class="control-button play-button" onclick="togglePlayPause()" title="Play/Pause">
+                        <svg id="playIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="5,3 19,12 5,21"/>
+                        </svg>
+                        <svg id="pauseIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hidden">
+                            <rect x="6" y="4" width="4" height="16"/>
+                            <rect x="14" y="4" width="4" height="16"/>
+                        </svg>
+                    </button>
+
+                    <button class="control-button" onclick="goForward()" title="Go Forward">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m9 18 6-6-6-6"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Timeline (only visible when paused) -->
+                <div id="timelineContainer" class="timeline-container">
+                    <span id="currentTime" class="timeline-time">0:00</span>
+                    <input type="range" id="timelineSlider" class="timeline-slider" min="0" max="100" value="0">
+                    <span id="duration" class="timeline-time">0:00</span>
+                </div>
+
+                <!-- Right Controls -->
+                <div class="controls-right">
+                    <div class="volume-control">
+                        <button id="volumeButton" class="volume-button" onclick="toggleMute()" title="Mute/Unmute">
+                            <svg id="volumeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/>
+                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                            </svg>
+                            <svg id="muteIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hidden">
+                                <polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/>
+                                <line x1="23" y1="9" x2="17" y2="15"/>
+                                <line x1="17" y1="9" x2="23" y2="15"/>
+                            </svg>
+                        </button>
+                        <input type="range" id="volumeSlider" class="volume-slider" min="0" max="1" step="0.1" value="1">
+                    </div>
+
+                    <button id="fullscreenButton" class="fullscreen-button" title="Toggle Fullscreen">
+                        <svg id="fullscreenIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                        </svg>
+                        <svg id="exitFullscreenIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hidden">
+                            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/screenfull.js/5.2.0/screenfull.min.js"></script>
-  <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
-  <script>
-    const videoData = [
-      { title: 'Title', url: 'https://raw.githubusercontent.com/vampuca/vampuca_player/main/KLKT_title.m4v' },
-      ...Array.from({ length: 19 }, (_, i) => ({ title: `Slide ${i+1}`, url: `https://raw.githubusercontent.com/vampuca/vampuca_player/main/KLKT${i+1}.m4v` })),
-      { title: 'End', url: 'https://raw.githubusercontent.com/vampuca/vampuca_player/main/KLKT_end.m4v' }
-    ];
-    let index = 0;
-    const player = new Plyr('#player', { clickToPlay: true });
-    const prev = document.getElementById('prev');
-    const next = document.getElementById('next');
-    const fsBtn = document.getElementById('fullscreen');
+    <script>
+        // Global variables
+        let currentChapter = 0; // Start with title video
+        let totalChapters = 21; // 21 actual chapters plus title and end
+        let isPlaying = false;
+        let isMuted = false;
+        let isFullscreen = false;
+        let controlsVisible = true;
+        let controlsTimeout;
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+        let preloadedVideos = new Map(); // Cache for preloaded videos
 
-    function loadVideo(i) {
-      index = i;
-      player.source = { type: 'video', sources: [{ src: videoData[i].url, type: 'video/mp4' }] };
-      player.play();
-    }
+        // GitHub repository base URL (corrected)
+        const GITHUB_BASE_URL = 'https://github.com/vampuca/vampuca_player/raw/main/';
 
-    prev.addEventListener('click', () => { if (index > 0) loadVideo(index - 1); });
-    next.addEventListener('click', () => { if (index < videoData.length - 1) loadVideo(index + 1); });
-    fsBtn.addEventListener('click', () => { if (screenfull.isEnabled) screenfull.toggle(document.getElementById('playerContainer')); });
+        // Video chapters data - corrected filenames from GitHub repository
+        const chapters = [
+            { number: 0, title: "KLKT Title", src: GITHUB_BASE_URL + "KLKT_TITLE.m4v" },
+            { number: 1, title: "Chapter 1", src: GITHUB_BASE_URL + "KLKT_1.m4v" },
+            { number: 2, title: "Chapter 2", src: GITHUB_BASE_URL + "KLKT_2.m4v" },
+            { number: 3, title: "Chapter 3", src: GITHUB_BASE_URL + "KLKT_3.m4v" },
+            { number: 4, title: "Chapter 4", src: GITHUB_BASE_URL + "KLKT_4.m4v" },
+            { number: 5, title: "Chapter 5", src: GITHUB_BASE_URL + "KLKT_5.m4v" },
+            { number: 6, title: "Chapter 6", src: GITHUB_BASE_URL + "KLKT_6.m4v" },
+            { number: 7, title: "Chapter 7", src: GITHUB_BASE_URL + "KLKT_7.m4v" },
+            { number: 8, title: "Chapter 8", src: GITHUB_BASE_URL + "KLKT_8.m4v" },
+            { number: 9, title: "Chapter 9", src: GITHUB_BASE_URL + "KLKT_9.m4v" },
+            { number: 10, title: "Chapter 10", src: GITHUB_BASE_URL + "KLKT_10.m4v" },
+            { number: 11, title: "Chapter 11", src: GITHUB_BASE_URL + "KLKT_11.m4v" },
+            { number: 12, title: "Chapter 12", src: GITHUB_BASE_URL + "KLKT_12.m4v" },
+            { number: 13, title: "Chapter 13", src: GITHUB_BASE_URL + "KLKT_13.m4v" },
+            { number: 14, title: "Chapter 14", src: GITHUB_BASE_URL + "KLKT_14.m4v" },
+            { number: 15, title: "Chapter 15", src: GITHUB_BASE_URL + "KLKT_15.m4v" },
+            { number: 16, title: "Chapter 16", src: GITHUB_BASE_URL + "KLKT_16.m4v" },
+            { number: 17, title: "Chapter 17", src: GITHUB_BASE_URL + "KLKT_17.m4v" },
+            { number: 18, title: "Chapter 18", src: GITHUB_BASE_URL + "KLKT_18.m4v" },
+            { number: 19, title: "Chapter 19", src: GITHUB_BASE_URL + "KLKT_19.m4v" },
+            { number: 20, title: "KLKT End", src: GITHUB_BASE_URL + "KLKT_END.m4v" }
+        ];
 
-    loadVideo(0);
-  </script>
+        // DOM elements
+        const video = document.getElementById('mainVideo');
+        const playButton = document.getElementById('playButton');
+        const playIcon = document.getElementById('playIcon');
+        const pauseIcon = document.getElementById('pauseIcon');
+        const volumeButton = document.getElementById('volumeButton');
+        const volumeIcon = document.getElementById('volumeIcon');
+        const muteIcon = document.getElementById('muteIcon');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const slideCounter = document.getElementById('slideCounter');
+        const controlsContainer = document.getElementById('controlsContainer');
+        const loadingState = document.getElementById('loadingState');
+        const dropdownMenu = document.getElementById('dropdownMenu');
+        const chapterList = document.getElementById('chapterList');
+        const playerContainer = document.getElementById('playerContainer');
+        const fullscreenButton = document.getElementById('fullscreenButton');
+        const fullscreenIcon = document.getElementById('fullscreenIcon');
+        const exitFullscreenIcon = document.getElementById('exitFullscreenIcon');
+        const timelineContainer = document.getElementById('timelineContainer');
+        const timelineSlider = document.getElementById('timelineSlider');
+        const currentTimeDisplay = document.getElementById('currentTime');
+        const durationDisplay = document.getElementById('duration');
+
+        // Initialize the player
+        function initializePlayer() {
+            generateChapterList();
+            
+            // Set initial video volume
+            video.volume = 0.8;
+            volumeSlider.value = 0.8;
+            
+            loadChapter(currentChapter);
+            setupEventListeners();
+            updateSlideCounter();
+            showControlsTemporarily();
+            
+            // Start preloading first few videos
+            setTimeout(() => {
+                preloadAdjacentVideos(0);
+            }, 1000);
+        }
+
+        // Generate chapter list in dropdown
+        function generateChapterList() {
+            chapterList.innerHTML = '';
+            chapters.forEach(chapter => {
+                const button = document.createElement('button');
+                button.className = 'chapter-item';
+                button.onclick = () => selectChapter(chapter.number);
+                
+                const title = document.createElement('span');
+                title.textContent = `${chapter.number}. ${chapter.title}`;
+                
+                const indicator = document.createElement('span');
+                indicator.className = 'chapter-indicator';
+                indicator.textContent = chapter.number === currentChapter ? '●' : '○';
+                
+                button.appendChild(title);
+                button.appendChild(indicator);
+                chapterList.appendChild(button);
+            });
+        }
+
+        // Preload adjacent videos for instant switching
+        function preloadAdjacentVideos(chapterNumber) {
+            const nextChapter = chapterNumber + 1;
+            const prevChapter = chapterNumber - 1;
+            
+            // Preload next video with mobile optimization
+            if (nextChapter < chapters.length && !preloadedVideos.has(nextChapter)) {
+                const nextVideo = document.createElement('video');
+                nextVideo.src = chapters[nextChapter].src;
+                nextVideo.preload = 'metadata'; // Use metadata for mobile
+                nextVideo.muted = true; // Required for mobile autoplay
+                preloadedVideos.set(nextChapter, nextVideo);
+                
+                // Start loading immediately
+                nextVideo.load();
+            }
+            
+            // Preload previous video with mobile optimization
+            if (prevChapter >= 0 && !preloadedVideos.has(prevChapter)) {
+                const prevVideo = document.createElement('video');
+                prevVideo.src = chapters[prevChapter].src;
+                prevVideo.preload = 'metadata'; // Use metadata for mobile
+                prevVideo.muted = true; // Required for mobile autoplay
+                preloadedVideos.set(prevChapter, prevVideo);
+                
+                // Start loading immediately
+                prevVideo.load();
+            }
+        }
+
+        // Load chapter with optimized loading
+        function loadChapter(chapterNumber, autoPlay = false) {
+            if (chapterNumber < 0 || chapterNumber >= chapters.length) return;
+            
+            const chapter = chapters.find(c => c.number === chapterNumber);
+            if (!chapter) return;
+            
+            // Check if video is already preloaded
+            if (preloadedVideos.has(chapterNumber)) {
+                const preloadedVideo = preloadedVideos.get(chapterNumber);
+                
+                // Use preloaded video source
+                video.src = preloadedVideo.src;
+                video.currentTime = 0;
+                
+                // Update current chapter immediately
+                currentChapter = chapterNumber;
+                updateSlideCounter();
+                updateChapterList();
+                
+                // Handle auto-play for navigation
+                if (autoPlay) {
+                    video.play().then(() => {
+                        isPlaying = true;
+                        updatePlayButton();
+                        hideTimelineOnPlay();
+                    }).catch(() => {
+                        isPlaying = false;
+                        updatePlayButton();
+                    });
+                }
+                
+                // Preload adjacent videos
+                preloadAdjacentVideos(chapterNumber);
+                return;
+            }
+            
+            // If not preloaded, load normally
+            showLoading();
+            
+            // Stop current video
+            video.pause();
+            isPlaying = false;
+            updatePlayButton();
+            
+            // Load new video
+            video.src = chapter.src;
+            video.load();
+            
+            // Update current chapter
+            currentChapter = chapterNumber;
+            updateSlideCounter();
+            updateChapterList();
+            
+            // Handle loading events
+            const handleCanPlay = () => {
+                hideLoading();
+                if (autoPlay) {
+                    video.play().then(() => {
+                        isPlaying = true;
+                        updatePlayButton();
+                        hideTimelineOnPlay();
+                    }).catch(() => {
+                        isPlaying = false;
+                        updatePlayButton();
+                    });
+                }
+                // Preload adjacent videos after main video loads
+                preloadAdjacentVideos(chapterNumber);
+            };
+            
+            video.addEventListener('canplay', handleCanPlay, { once: true });
+            video.addEventListener('loadeddata', hideLoading, { once: true });
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Video events
+            video.addEventListener('loadstart', showLoading);
+            video.addEventListener('canplaythrough', hideLoading);
+            video.addEventListener('timeupdate', updateTimeline);
+            video.addEventListener('loadedmetadata', updateDuration);
+            video.addEventListener('ended', handleVideoEnd);
+            video.addEventListener('play', () => {
+                isPlaying = true;
+                updatePlayButton();
+                hideTimelineOnPlay();
+            });
+            video.addEventListener('pause', () => {
+                isPlaying = false;
+                updatePlayButton();
+                showTimelineOnPause();
+            });
+
+            // Volume controls
+            volumeSlider.addEventListener('input', (e) => {
+                video.volume = e.target.value;
+                updateVolumeIcon();
+            });
+
+            // Fullscreen button with mobile support
+            fullscreenButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleFullscreen();
+            });
+
+            fullscreenButton.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleFullscreen();
+            });
+
+            // Timeline controls
+            timelineSlider.addEventListener('input', (e) => {
+                const time = (e.target.value / 100) * video.duration;
+                video.currentTime = time;
+            });
+
+            // Keyboard controls
+            document.addEventListener('keydown', handleKeyPress);
+
+            // Mouse controls
+            document.addEventListener('click', handleDocumentClick);
+            document.addEventListener('mousemove', showControlsTemporarily);
+
+            // Touch controls for mobile
+            setupTouchControls();
+
+            // Fullscreen events - comprehensive mobile support
+            document.addEventListener('fullscreenchange', handleFullscreenChange);
+            document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+            document.addEventListener('msfullscreenchange', handleFullscreenChange);
+            
+            // iOS Safari specific events
+            video.addEventListener('webkitbeginfullscreen', handleFullscreenChange);
+            video.addEventListener('webkitendfullscreen', handleFullscreenChange);
+
+            // Prevent context menu
+            document.addEventListener('contextmenu', e => e.preventDefault());
+        }
+
+        // Setup touch controls for mobile
+        function setupTouchControls() {
+            playerContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+            playerContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+            playerContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
+        }
+
+        // Handle touch start
+        function handleTouchStart(e) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }
+
+        // Handle touch move
+        function handleTouchMove(e) {
+            e.preventDefault(); // Prevent scrolling
+        }
+
+        // Handle touch end
+        function handleTouchEnd(e) {
+            touchEndX = e.changedTouches[0].clientX;
+            touchEndY = e.changedTouches[0].clientY;
+            handleTouchGesture();
+        }
+
+        // Handle touch gestures
+        function handleTouchGesture() {
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            const minSwipeDistance = 50;
+
+            // Horizontal swipe
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+                if (deltaX > 0) {
+                    goBack(); // Swipe right - go back
+                } else {
+                    goForward(); // Swipe left - go forward
+                }
+            }
+            // Vertical swipe or tap
+            else if (Math.abs(deltaY) < minSwipeDistance && Math.abs(deltaX) < minSwipeDistance) {
+                togglePlayPause(); // Tap to play/pause
+            }
+        }
+
+        // Handle keyboard controls
+        function handleKeyPress(e) {
+            switch(e.key) {
+                case ' ':
+                case 'k':
+                    e.preventDefault();
+                    togglePlayPause();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    goBack();
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    goForward();
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    adjustVolume(0.1);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    adjustVolume(-0.1);
+                    break;
+                case 'm':
+                    e.preventDefault();
+                    toggleMute();
+                    break;
+                case 'f':
+                    e.preventDefault();
+                    toggleFullscreen();
+                    break;
+                case 'Escape':
+                    if (isFullscreen) {
+                        exitFullscreen();
+                    }
+                    break;
+            }
+        }
+
+        // Handle document click for dropdown
+        function handleDocumentClick(e) {
+            if (!e.target.closest('.studio-branding')) {
+                dropdownMenu.classList.add('hidden');
+            }
+        }
+
+        // Show/hide controls temporarily
+        function showControlsTemporarily() {
+            controlsContainer.classList.remove('hidden');
+            controlsVisible = true;
+            
+            clearTimeout(controlsTimeout);
+            controlsTimeout = setTimeout(() => {
+                if (isPlaying) {
+                    controlsContainer.classList.add('hidden');
+                    controlsVisible = false;
+                }
+            }, 3000);
+        }
+
+        // Toggle play/pause
+        function togglePlayPause() {
+            if (video.paused) {
+                // Unmute when user clicks play
+                video.muted = false;
+                video.play();
+            } else {
+                video.pause();
+            }
+        }
+
+        // Update play button
+        function updatePlayButton() {
+            if (isPlaying) {
+                playIcon.classList.add('hidden');
+                pauseIcon.classList.remove('hidden');
+            } else {
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+            }
+        }
+
+        // Show timeline only when paused
+        function showTimelineOnPause() {
+            timelineContainer.classList.add('visible');
+        }
+
+        // Hide timeline when playing
+        function hideTimelineOnPlay() {
+            timelineContainer.classList.remove('visible');
+        }
+
+        // Update timeline
+        function updateTimeline() {
+            if (video.duration) {
+                const progress = (video.currentTime / video.duration) * 100;
+                timelineSlider.value = progress;
+                
+                currentTimeDisplay.textContent = formatTime(video.currentTime);
+            }
+        }
+
+        // Update duration display
+        function updateDuration() {
+            if (video.duration) {
+                durationDisplay.textContent = formatTime(video.duration);
+            }
+        }
+
+        // Format time in MM:SS format
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = Math.floor(seconds % 60);
+            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        // Go to previous chapter
+        function goBack() {
+            if (currentChapter > 0) {
+                loadChapter(currentChapter - 1, true); // Auto-play when navigating
+            }
+        }
+
+        // Go to next chapter
+        function goForward() {
+            if (currentChapter < chapters.length - 1) {
+                loadChapter(currentChapter + 1, true); // Auto-play when navigating
+            }
+        }
+
+        // Handle video end - manual navigation only
+        function handleVideoEnd() {
+            isPlaying = false;
+            updatePlayButton();
+            showTimelineOnPause();
+            // Do not auto-advance to next chapter
+        }
+
+        // Select chapter from dropdown
+        function selectChapter(chapterNumber) {
+            loadChapter(chapterNumber);
+            dropdownMenu.classList.add('hidden');
+        }
+
+        // Toggle dropdown menu
+        function toggleDropdown() {
+            dropdownMenu.classList.toggle('hidden');
+        }
+
+        // Update chapter list indicators
+        function updateChapterList() {
+            const items = chapterList.querySelectorAll('.chapter-item');
+            items.forEach((item, index) => {
+                const indicator = item.querySelector('.chapter-indicator');
+                if (index === currentChapter) {
+                    item.classList.add('active');
+                    indicator.textContent = '●';
+                } else {
+                    item.classList.remove('active');
+                    indicator.textContent = '○';
+                }
+            });
+        }
+
+        // Update slide counter
+        function updateSlideCounter() {
+            const displayChapter = currentChapter === 0 ? 'Title' : 
+                                 currentChapter === 20 ? 'End' : 
+                                 currentChapter.toString();
+            const displayTotal = chapters.length;
+            slideCounter.textContent = `${displayChapter} / ${displayTotal}`;
+        }
+
+        // Toggle mute
+        function toggleMute() {
+            if (video.muted) {
+                video.muted = false;
+                isMuted = false;
+            } else {
+                video.muted = true;
+                isMuted = true;
+            }
+            updateVolumeIcon();
+        }
+
+        // Update volume icon
+        function updateVolumeIcon() {
+            if (video.muted || video.volume === 0) {
+                volumeIcon.classList.add('hidden');
+                muteIcon.classList.remove('hidden');
+            } else {
+                volumeIcon.classList.remove('hidden');
+                muteIcon.classList.add('hidden');
+            }
+        }
+
+        // Adjust volume
+        function adjustVolume(delta) {
+            const newVolume = Math.max(0, Math.min(1, video.volume + delta));
+            video.volume = newVolume;
+            volumeSlider.value = newVolume;
+            updateVolumeIcon();
+        }
+
+        // Toggle fullscreen
+        function toggleFullscreen() {
+            if (!isFullscreen) {
+                enterFullscreen();
+            } else {
+                exitFullscreen();
+            }
+        }
+
+        // Enter fullscreen with mobile support
+        function enterFullscreen() {
+            const elem = playerContainer;
+            
+            try {
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    elem.webkitRequestFullscreen();
+                } else if (elem.webkitRequestFullScreen) {
+                    elem.webkitRequestFullScreen();
+                } else if (elem.mozRequestFullScreen) {
+                    elem.mozRequestFullScreen();
+                } else if (elem.msRequestFullscreen) {
+                    elem.msRequestFullscreen();
+                } else if (video.webkitEnterFullscreen) {
+                    // iOS Safari fallback
+                    video.webkitEnterFullscreen();
+                } else if (video.webkitEnterFullScreen) {
+                    video.webkitEnterFullScreen();
+                }
+            } catch (error) {
+                console.log('Fullscreen not supported on this device');
+            }
+        }
+
+        // Exit fullscreen with mobile support
+        function exitFullscreen() {
+            try {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.webkitCancelFullScreen) {
+                    document.webkitCancelFullScreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                } else if (video.webkitExitFullscreen) {
+                    // iOS Safari fallback
+                    video.webkitExitFullscreen();
+                } else if (video.webkitExitFullScreen) {
+                    video.webkitExitFullScreen();
+                }
+            } catch (error) {
+                console.log('Exit fullscreen not supported on this device');
+            }
+        }
+
+        // Handle fullscreen change with mobile support
+        function handleFullscreenChange() {
+            isFullscreen = !!(document.fullscreenElement || 
+                            document.webkitFullscreenElement || 
+                            document.webkitCurrentFullScreenElement ||
+                            document.mozFullScreenElement || 
+                            document.msFullscreenElement);
+            
+            updateFullscreenButton();
+        }
+
+        // Update fullscreen button
+        function updateFullscreenButton() {
+            if (isFullscreen) {
+                fullscreenIcon.classList.add('hidden');
+                exitFullscreenIcon.classList.remove('hidden');
+            } else {
+                fullscreenIcon.classList.remove('hidden');
+                exitFullscreenIcon.classList.add('hidden');
+            }
+        }
+
+        // Show loading state
+        function showLoading() {
+            loadingState.classList.remove('hidden');
+        }
+
+        // Hide loading state
+        function hideLoading() {
+            loadingState.classList.add('hidden');
+        }
+
+        // Initialize player when page loads
+        document.addEventListener('DOMContentLoaded', initializePlayer);
+    </script>
 </body>
 </html>
