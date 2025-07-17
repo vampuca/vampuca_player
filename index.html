@@ -483,7 +483,7 @@
             touch-action: manipulation;
         }
 
-        /* Navigation Arrows */
+        /* Navigation Arrows - Only for mobile */
         .navigation-arrows {
             position: absolute;
             top: 0;
@@ -492,19 +492,20 @@
             bottom: 0;
             pointer-events: none;
             z-index: 30;
+            display: none; /* Hidden by default on desktop */
         }
 
         .nav-arrow {
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            width: 60px;
-            height: 60px;
+            width: 50px;
+            height: 50px;
             background: rgba(0, 0, 0, 0.6);
             border: none;
             border-radius: 50%;
             color: white;
-            font-size: 24px;
+            font-size: 20px;
             cursor: pointer;
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
@@ -525,32 +526,26 @@
         }
 
         .nav-arrow.left {
-            left: 30px;
+            left: 20px;
         }
 
         .nav-arrow.right {
-            right: 30px;
+            right: 20px;
         }
 
-        /* Mobile responsive sizing for navigation arrows */
+        /* Show navigation arrows only on mobile */
         @media (max-width: 768px) {
-            .nav-arrow {
-                width: 50px;
-                height: 50px;
-                font-size: 20px;
-            }
-            
-            .nav-arrow.left {
-                left: 20px;
-            }
-            
-            .nav-arrow.right {
-                right: 20px;
+            .navigation-arrows {
+                display: block;
             }
         }
 
         /* Touch-friendly mobile controls for navigation arrows */
         @media (hover: none) and (pointer: coarse) {
+            .navigation-arrows {
+                display: block;
+            }
+            
             .nav-arrow {
                 padding: 15px;
                 min-width: 44px;
