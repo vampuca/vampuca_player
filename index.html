@@ -494,6 +494,11 @@
             z-index: 30;
             display: none; /* Hidden by default on desktop */
         }
+        
+        /* Show navigation arrows in fullscreen on mobile */
+        .player-container:fullscreen .navigation-arrows {
+            display: block;
+        }
 
         .nav-arrow {
             position: absolute;
@@ -800,6 +805,7 @@
         function detectMobile() {
             isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
                       'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            console.log('Mobile detected:', isMobile);
         }
 
         // Preload next video
@@ -1093,8 +1099,11 @@
 
         // Handle touch start
         function handleTouchStart(e) {
-            // Prevent default to ensure touch events work in fullscreen
-            e.preventDefault();
+            // Skip if touch is on a button or control
+            if (e.target.closest('button') || e.target.closest('.controls-container')) {
+                return;
+            }
+            
             const touch = e.touches[0];
             touchStartX = touch.clientX;
             touchStartY = touch.clientY;
@@ -1103,8 +1112,11 @@
 
         // Handle touch end
         function handleTouchEnd(e) {
-            // Prevent default to ensure touch events work in fullscreen
-            e.preventDefault();
+            // Skip if touch is on a button or control
+            if (e.target.closest('button') || e.target.closest('.controls-container')) {
+                return;
+            }
+            
             const touch = e.changedTouches[0];
             const touchEndX = touch.clientX;
             const touchEndY = touch.clientY;
@@ -1120,6 +1132,8 @@
             
             // Horizontal swipe for navigation
             if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance && swipeTime < maxSwipeTime) {
+                e.preventDefault();
+                console.log('Swipe detected:', deltaX > 0 ? 'right' : 'left');
                 if (deltaX > 0) {
                     goToPrevious(); // Swipe right - go back
                 } else {
@@ -1168,10 +1182,14 @@
         // Navigation arrows - prevent control panel from showing
         document.getElementById('prevArrow').addEventListener('click', (e) => {
             e.stopPropagation();
+            e.preventDefault();
+            console.log('Previous arrow clicked');
             goToPrevious();
         });
         document.getElementById('nextArrow').addEventListener('click', (e) => {
             e.stopPropagation();
+            e.preventDefault();
+            console.log('Next arrow clicked');
             goToNext();
         });
         
@@ -1208,17 +1226,19 @@
         });
 
         // Touch events - work in both regular and fullscreen modes
-        if (isMobile) {
-            videoContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
-            videoContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
-            
-            // Also add touch events to the entire player container for fullscreen
-            playerContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
-            playerContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
-            
-            // Add touch events to document for fullscreen mode
-            document.addEventListener('touchstart', handleTouchStart, { passive: false });
-            document.addEventListener('touchend', handleTouchEnd, { passive: false });
+        function addTouchEvents() {
+            if (isMobile) {
+                videoContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+                videoContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
+                
+                // Also add touch events to the entire player container for fullscreen
+                playerContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+                playerContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
+                
+                // Add touch events to document for fullscreen mode
+                document.addEventListener('touchstart', handleTouchStart, { passive: false });
+                document.addEventListener('touchend', handleTouchEnd, { passive: false });
+            }
         }
 
         // Click to play/pause
@@ -1245,9 +1265,11 @@
         document.addEventListener('msfullscreenchange', handleFullscreenChange);
         
         // Orientation change events for mobile
-        if (isMobile) {
-            screen.orientation?.addEventListener('change', handleOrientationChange);
-            window.addEventListener('orientationchange', handleOrientationChange);
+        function addOrientationEvents() {
+            if (isMobile) {
+                screen.orientation?.addEventListener('change', handleOrientationChange);
+                window.addEventListener('orientationchange', handleOrientationChange);
+            }
         }
 
         // Mouse move shows controls
@@ -1256,6 +1278,8 @@
         // Initialize
         function initialize() {
             detectMobile();
+            addTouchEvents();
+            addOrientationEvents();
             generateChapterList();
             loadVideo(0);
             updateControls();
