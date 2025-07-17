@@ -494,35 +494,31 @@
             z-index: 30;
             display: none; /* Hidden by default on desktop */
         }
-        
-        /* Show navigation arrows in fullscreen on mobile */
-        .player-container:fullscreen .navigation-arrows {
-            display: block;
-        }
 
         .nav-arrow {
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            width: 50px;
-            height: 50px;
-            background: rgba(0, 0, 0, 0.6);
-            border: none;
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 2px solid white;
             border-radius: 50%;
-            color: white;
-            font-size: 20px;
+            color: black;
+            font-size: 24px;
             cursor: pointer;
             transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
             pointer-events: auto;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-weight: bold;
         }
 
-        .nav-arrow:hover {
-            background: rgba(0, 0, 0, 0.8);
-            color: hsl(14,100%,60%);
+        .nav-arrow:hover,
+        .nav-arrow:active {
+            background: hsl(14,100%,60%);
+            color: white;
             transform: translateY(-50%) scale(1.1);
         }
 
@@ -538,21 +534,20 @@
             right: 20px;
         }
 
-        /* Show navigation arrows only on mobile */
+        /* Show navigation arrows on mobile devices */
         @media (max-width: 768px) {
             .navigation-arrows {
-                display: block;
+                display: block !important;
             }
         }
 
-        /* Touch-friendly mobile controls for navigation arrows */
+        /* Touch-friendly mobile controls */
         @media (hover: none) and (pointer: coarse) {
             .navigation-arrows {
-                display: block;
+                display: block !important;
             }
             
             .nav-arrow {
-                padding: 15px;
                 min-width: 44px;
                 min-height: 44px;
             }
@@ -1052,6 +1047,12 @@
         function handleFullscreenChange() {
             isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
             
+            // Show navigation arrows in fullscreen on mobile
+            const navArrows = document.querySelector('.navigation-arrows');
+            if (isMobile && navArrows) {
+                navArrows.style.display = 'block';
+            }
+            
             if (isFullscreen && isPlaying) {
                 controlsContainer.classList.add('hidden');
                 controlsVisible = false;
@@ -1108,6 +1109,7 @@
             touchStartX = touch.clientX;
             touchStartY = touch.clientY;
             touchStartTime = Date.now();
+            console.log('Touch start at:', touchStartX, touchStartY);
         }
 
         // Handle touch end
@@ -1127,13 +1129,15 @@
             const minSwipeDistance = 50;
             const maxSwipeTime = 300;
 
+            console.log('Touch end at:', touchEndX, touchEndY, 'Delta:', deltaX, deltaY, 'Time:', swipeTime);
+
             // Check if touch is on navigation arrows (avoid showing controls)
             const isOnArrow = e.target.closest('.nav-arrow');
             
             // Horizontal swipe for navigation
             if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance && swipeTime < maxSwipeTime) {
-                e.preventDefault();
-                console.log('Swipe detected:', deltaX > 0 ? 'right' : 'left');
+                e.preventDefault(); // Prevent default browser behavior
+                console.log('Swipe detected:', deltaX > 0 ? 'right (previous)' : 'left (next)');
                 if (deltaX > 0) {
                     goToPrevious(); // Swipe right - go back
                 } else {
@@ -1142,6 +1146,7 @@
             }
             // Tap for play/pause (but not on arrows)
             else if (Math.abs(deltaX) < 30 && Math.abs(deltaY) < 30 && swipeTime < 200 && !isOnArrow) {
+                console.log('Tap detected');
                 togglePlayPause();
                 // Show controls temporarily in fullscreen mode
                 if (isFullscreen) {
@@ -1225,19 +1230,21 @@
             updatePlayButton();
         });
 
-        // Touch events - work in both regular and fullscreen modes
+        // Touch events and mobile setup
         function addTouchEvents() {
+            console.log('Adding touch events, isMobile:', isMobile);
             if (isMobile) {
+                // Force show navigation arrows on mobile
+                const navArrows = document.querySelector('.navigation-arrows');
+                if (navArrows) {
+                    navArrows.style.display = 'block';
+                }
+                
+                // Add touch events to video container only (avoid duplicates)
                 videoContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
                 videoContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
                 
-                // Also add touch events to the entire player container for fullscreen
-                playerContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
-                playerContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
-                
-                // Add touch events to document for fullscreen mode
-                document.addEventListener('touchstart', handleTouchStart, { passive: false });
-                document.addEventListener('touchend', handleTouchEnd, { passive: false });
+                console.log('Touch events and mobile navigation added successfully');
             }
         }
 
@@ -1283,6 +1290,20 @@
             generateChapterList();
             loadVideo(0);
             updateControls();
+            
+            // Debug: Check if navigation arrows exist
+            const navArrows = document.querySelector('.navigation-arrows');
+            const prevArrow = document.getElementById('prevArrow');
+            const nextArrow = document.getElementById('nextArrow');
+            
+            console.log('Navigation arrows found:', !!navArrows);
+            console.log('Previous arrow found:', !!prevArrow);
+            console.log('Next arrow found:', !!nextArrow);
+            
+            if (isMobile && navArrows) {
+                console.log('Force showing navigation arrows for mobile');
+                navArrows.style.display = 'block';
+            }
         }
 
         // Start when page loads
