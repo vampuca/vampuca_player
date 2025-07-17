@@ -197,7 +197,7 @@
             background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 50%, transparent 100%);
             padding: 4rem 1rem 1rem;
             transition: all 0.3s ease;
-            z-index: 40;
+            z-index: 2000; /* Always above overlay */
         }
 
         .controls-container.hidden {
@@ -299,6 +299,7 @@
             justify-content: center;
             min-width: 3rem;
             min-height: 3rem;
+            z-index: 2001; /* Always above overlay */
         }
 
         .control-button:hover:not(:disabled) {
@@ -677,10 +678,10 @@
         </div>
 
         <!-- Main Video Container -->
-        <div class="video-container" id="videoContainer">
+        <div class="video-container" id="videoContainer" style="position:relative;">
             <video id="mainVideo" class="main-video" preload="none" playsinline webkit-playsinline muted></video>
-            <!-- Mobile swipe overlay -->
-            <div id="mobileSwipeOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:20;display:none;"></div>
+            <!-- Mobile swipe overlay (only on mobile, always below controls) -->
+            <div id="mobileSwipeOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:1000;background:transparent;display:none;"></div>
             <!-- Loading State -->
             <div id="loadingState" class="loading-state hidden">
                 <div>
@@ -688,8 +689,6 @@
                     <div class="loading-text" id="loadingText">Loading...</div>
                 </div>
             </div>
-
-
         </div>
 
         <!-- Navigation Arrows -->
@@ -762,41 +761,25 @@
 
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
     <script>
-        // Video sources with correct GitHub URLs
+        // --- Robust mobile detection ---
+        function isReallyMobile() {
+            return (
+                /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                (typeof window.orientation !== 'undefined') ||
+                window.innerWidth <= 800
+            );
+        }
+        // --- Video sources: Title is always first ---
         const videoSources = [
-            {
-                id: 1,
-                src: 'https://github.com/vampuca/vampuca_player/raw/main/KLKT_TITLE.m4v',
-                title: 'Title'
-            },
+            { id: 1, src: 'KLKT_TITLE.m4v', title: 'Title' },
             ...Array.from({ length: 20 }, (_, i) => ({
                 id: i + 2,
-                src: `https://github.com/vampuca/vampuca_player/raw/main/KLKT_${i + 1}.m4v`,
+                src: `KLKT_${i + 1}.m4v`,
                 title: `Chapter ${i + 1}`
             })),
-            {
-                id: 22,
-                src: 'https://github.com/vampuca/vampuca_player/raw/main/KLKT_END.m4v',
-                title: 'End'
-            }
+            { id: 22, src: 'KLKT_END.m4v', title: 'End' }
         ];
-
-        // Global variables
-        let currentSlide = 0;
-        let isPlaying = false;
-        let isMuted = false;
-        let isFullscreen = false;
-        let showDropdown = false;
-        let controlsVisible = true;
-        let controlsTimeout;
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let touchStartTime = 0;
-        let isMobile = false;
-        let preloadRef = null;
-
-
-        // DOM elements
+        // --- DOM elements ---
         const playerContainer = document.getElementById('playerContainer');
         const videoContainer = document.getElementById('videoContainer');
         const mainVideo = document.getElementById('mainVideo');
@@ -817,659 +800,35 @@
         const muteIcon = document.getElementById('muteIcon');
         const mutedIcon = document.getElementById('mutedIcon');
         const volumeSlider = document.getElementById('volumeSlider');
-
-        // Mobile detection
-        function detectMobile() {
-            isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                      'ontouchstart' in window || navigator.maxTouchPoints > 0;
-            console.log('Mobile detected:', isMobile);
-        }
-
-        // Aggressive preload for next and previous videos
-        function preloadNextVideo(nextIndex) {
-            if (nextIndex >= 0 && nextIndex < videoSources.length) {
-                if (!preloadRef) {
-                    preloadRef = document.createElement('video');
-                }
-                preloadRef.src = videoSources[nextIndex].src;
-                preloadRef.preload = 'auto'; // More aggressive preloading
-                preloadRef.load(); // Force load
-            }
-        }
-
-        // Preload adjacent videos (previous and next)
-        function preloadAdjacentVideos(currentIndex) {
-            // Preload next video
-            if (currentIndex + 1 < videoSources.length) {
-                preloadNextVideo(currentIndex + 1);
-            }
-            
-            // Preload previous video
-            if (currentIndex - 1 >= 0) {
-                const prevVideo = document.createElement('video');
-                prevVideo.src = videoSources[currentIndex - 1].src;
-                prevVideo.preload = 'metadata';
-                prevVideo.load();
-            }
-        }
-
-        // Load video function with enhanced loading feedback
-        function loadVideo(index, autoplay = false) {
-            if (index < 0 || index >= videoSources.length) return;
-            
-            console.log('Loading video:', index, videoSources[index].title);
-            
-            currentSlide = index;
-            isPlaying = false;
-            loadingState.classList.remove('hidden');
-            
-            // Update loading text with chapter info
-            const chapterTitle = videoSources[index].title;
-            loadingText.textContent = `Loading ${chapterTitle}...`;
-            
-            // Stop current video
-            mainVideo.pause();
-            mainVideo.currentTime = 0;
-            
-            // Load new video with cache busting only when needed
-            const videoSrc = videoSources[index].src;
-            if (mainVideo.src !== videoSrc) {
-                mainVideo.src = videoSrc;
-                mainVideo.muted = isMuted;
-                mainVideo.load();
-            }
-            
-            // Show loading progress
-            let loadingProgress = 0;
-            const loadingInterval = setInterval(() => {
-                loadingProgress += 10;
-                if (loadingProgress <= 90) {
-                    loadingText.textContent = `Loading ${chapterTitle}... ${loadingProgress}%`;
-                } else {
-                    clearInterval(loadingInterval);
-                }
-            }, 100);
-            
-            // Preload adjacent videos
-            preloadAdjacentVideos(index);
-            
-            updateSlideCounter();
-            updateChapterList();
-            updateControls();
-            
-            // Clear loading on video ready
-            mainVideo.addEventListener('loadeddata', () => {
-                clearInterval(loadingInterval);
-                loadingText.textContent = `${chapterTitle} ready!`;
-                setTimeout(() => {
-                    loadingState.classList.add('hidden');
-                }, 300);
-            }, { once: true });
-            
-            // Handle autoplay
-            if (autoplay) {
-                mainVideo.addEventListener('canplay', () => {
-                    mainVideo.play().then(() => {
-                        isPlaying = true;
-                        updatePlayButton();
-                        console.log('Video started playing:', videoSources[index].title);
-                    }).catch((error) => {
-                        console.log('Autoplay prevented:', error);
-                    });
-                }, { once: true });
-            }
-        }
-
-        // Toggle play/pause
-        function togglePlayPause() {
-            if (isPlaying) {
-                mainVideo.pause();
-            } else {
-                mainVideo.play().catch((error) => {
-                    console.log('Play prevented:', error);
-                });
-            }
-        }
-
-        // Toggle mute
-        function toggleMute() {
-            const newMuted = !isMuted;
-            isMuted = newMuted;
-            mainVideo.muted = newMuted;
-            updateMuteButton();
-        }
-
-        // Handle volume change
-        function handleVolumeChange(e) {
-            const newVolume = parseFloat(e.target.value) / 100;
-            mainVideo.volume = newVolume;
-            isMuted = newVolume === 0;
-            updateMuteButton();
-        }
-
-        // Update play button
-        function updatePlayButton() {
-            if (isPlaying) {
-                playIcon.classList.add('hidden');
-                pauseIcon.classList.remove('hidden');
-            } else {
-                playIcon.classList.remove('hidden');
-                pauseIcon.classList.add('hidden');
-            }
-        }
-
-        // Update mute button
-        function updateMuteButton() {
-            if (isMuted) {
-                muteIcon.classList.add('hidden');
-                mutedIcon.classList.remove('hidden');
-            } else {
-                muteIcon.classList.remove('hidden');
-                mutedIcon.classList.add('hidden');
-            }
-        }
-
-        // Update slide counter
-        function updateSlideCounter() {
-            const displayText = currentSlide === 0 ? 'Title' : 
-                               currentSlide === 21 ? 'End' :
-                               `Chapter ${currentSlide}`;
-            slideCounter.textContent = `${displayText} / 22`;
-        }
-
-        // Update controls - hide buttons on first and last page
-        function updateControls() {
-            // Hide prev button and play button on first page (title page)
-            if (currentSlide === 0) {
-                prevBtn.style.display = 'none';
-                playBtn.style.display = 'none';
-            } else {
-                prevBtn.style.display = 'flex';
-                playBtn.style.display = 'flex';
-            }
-            
-            // Hide next button on last page
-            if (currentSlide === videoSources.length - 1) {
-                nextBtn.style.display = 'none';
-            } else {
-                nextBtn.style.display = 'flex';
-            }
-        }
-
-        // Update chapter list
-        function updateChapterList() {
-            const items = chapterList.querySelectorAll('.chapter-item');
-            items.forEach((item, index) => {
-                if (index === currentSlide) {
-                    item.classList.add('active');
-                } else {
-                    item.classList.remove('active');
-                }
-            });
-        }
-
-        // Generate chapter list
-        function generateChapterList() {
-            chapterList.innerHTML = '';
-            videoSources.forEach((video, index) => {
-                const button = document.createElement('button');
-                button.className = 'chapter-item';
-                button.innerHTML = `
-                    <span>${video.title}</span>
-                    <span class="chapter-indicator">›</span>
-                `;
-                button.addEventListener('click', () => {
-                    console.log('Chapter selected:', index, video.title);
-                    loadVideo(index, true);
-                    toggleDropdown();
-                });
-                chapterList.appendChild(button);
-            });
-        }
-
-        // Toggle dropdown
-        function toggleDropdown() {
-            showDropdown = !showDropdown;
-            if (showDropdown) {
-                dropdownMenu.classList.add('visible');
-                console.log('Hamburger clicked, showDropdown:', showDropdown);
-            } else {
-                dropdownMenu.classList.remove('visible');
-            }
-        }
-
-        // Previous video
-        function goToPrevious() {
-            if (currentSlide > 0) {
-                loadVideo(currentSlide - 1, true);
-            }
-        }
-
-        // Next video
-        function goToNext() {
-            if (currentSlide < videoSources.length - 1) {
-                loadVideo(currentSlide + 1, true);
-            }
-        }
-
-        // Toggle fullscreen
-        function toggleFullscreen() {
-            if (isFullscreen) {
-                exitFullscreen();
-            } else {
-                enterFullscreen();
-            }
-        }
-
-        // Enter fullscreen with iOS Safari support
-        function enterFullscreen() {
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-            
-            if (isIOS && isSafari) {
-                // iOS Safari - use webkit video fullscreen
-                if (mainVideo.webkitEnterFullscreen) {
-                    mainVideo.webkitEnterFullscreen();
-                } else if (mainVideo.webkitRequestFullscreen) {
-                    mainVideo.webkitRequestFullscreen();
-                }
-            } else {
-                // Standard browsers - use Fullscreen API
-                if (playerContainer.requestFullscreen) {
-                    playerContainer.requestFullscreen().then(() => {
-                        lockLandscapeOrientation();
-                    });
-                } else if (playerContainer.webkitRequestFullscreen) {
-                    playerContainer.webkitRequestFullscreen();
-                    lockLandscapeOrientation();
-                } else if (playerContainer.msRequestFullscreen) {
-                    playerContainer.msRequestFullscreen();
-                    lockLandscapeOrientation();
-                }
-            }
-        }
-
-        // Exit fullscreen
-        function exitFullscreen() {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            } else if (document.msExitFullscreen) {
-                document.msExitFullscreen();
-            }
-        }
-
-        // Lock orientation to landscape (Android/Chrome only)
-        function lockLandscapeOrientation() {
-            if (screen.orientation && screen.orientation.lock) {
-                screen.orientation.lock('landscape-primary').catch(err => {
-                    console.log('Orientation lock failed:', err);
-                });
-            }
-        }
-
-        // Handle fullscreen change - SLIDE NAVIGATION MODE
-        function handleFullscreenChange() {
-            isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
-            
-            console.log('Fullscreen changed:', isFullscreen);
-            console.log('Mobile device:', isMobile);
-            console.log('SLIDE NAVIGATION MODE:', isFullscreen && isMobile ? 'ACTIVATED' : 'DEACTIVATED');
-            
-            // Mobile fullscreen = slide navigation mode (CSS handles arrow visibility)
-            if (isFullscreen && isMobile) {
-                console.log('🎬 SLIDE NAVIGATION MODE ACTIVATED - Arrows should be visible!');
-                // Force show arrows on mobile fullscreen
-                const navArrows = document.querySelector('.navigation-arrows');
-                if (navArrows) {
-                    navArrows.style.display = 'block';
-                    navArrows.style.opacity = '1';
-                    navArrows.style.visibility = 'visible';
-                    console.log('Navigation arrows forced visible');
-                }
-            } else {
-                console.log('Normal video mode');
-            }
-            
-            if (isFullscreen && isPlaying) {
-                controlsContainer.classList.add('hidden');
-                controlsVisible = false;
-            } else {
-                controlsContainer.classList.remove('hidden');
-                controlsVisible = true;
-            }
-        }
-
-        // Handle orientation change for mobile devices
-        function handleOrientationChange() {
-            if (!isMobile) return;
-            
-            // Delay to ensure orientation change is complete
-            setTimeout(() => {
-                const orientation = screen.orientation?.type || window.orientation;
-                const isLandscape = orientation?.includes('landscape') || Math.abs(window.orientation) === 90;
-                
-                // Only for non-iOS devices (iOS Safari handles fullscreen differently)
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-                const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-                
-                if (isLandscape && !isFullscreen && isPlaying && !(isIOS && isSafari)) {
-                    // Auto-enter fullscreen when rotated to landscape
-                    enterFullscreen();
-                }
-            }, 100);
-        }
-
-        // Show controls temporarily
-        function showControlsTemporarily() {
-            if (!controlsVisible) {
-                controlsContainer.classList.remove('hidden');
-                controlsVisible = true;
-            }
-            
-            clearTimeout(controlsTimeout);
-            controlsTimeout = setTimeout(() => {
-                if (isPlaying) {
-                    controlsContainer.classList.add('hidden');
-                    controlsVisible = false;
-                }
-            }, 1500);
-        }
-
-        // Handle touch start
-        function handleTouchStart(e) {
-            // Skip if touch is on a button or control
-            if (e.target.closest('button') || e.target.closest('.controls-container')) {
-                return;
-            }
-            
-            const touch = e.touches[0];
-            touchStartX = touch.clientX;
-            touchStartY = touch.clientY;
-            touchStartTime = Date.now();
-            console.log('Touch start at:', touchStartX, touchStartY);
-        }
-
-        // Handle touch end
-        function handleTouchEnd(e) {
-            // Skip if touch is on a button or control
-            if (e.target.closest('button') || e.target.closest('.controls-container')) {
-                return;
-            }
-            
-            const touch = e.changedTouches[0];
-            const touchEndX = touch.clientX;
-            const touchEndY = touch.clientY;
-            const touchEndTime = Date.now();
-            const deltaX = touchEndX - touchStartX;
-            const deltaY = touchEndY - touchStartY;
-            const swipeTime = touchEndTime - touchStartTime;
-            const minSwipeDistance = 50;
-            const maxSwipeTime = 300;
-
-            console.log('Touch end at:', touchEndX, touchEndY, 'Delta:', deltaX, deltaY, 'Time:', swipeTime);
-
-            // Check if touch is on navigation arrows (avoid showing controls)
-            const isOnArrow = e.target.closest('.nav-arrow');
-            
-            // MOBILE FULLSCREEN = SLIDE NAVIGATION MODE
-            if (isFullscreen && isMobile) {
-                // SLIDE NAVIGATION: Horizontal swipe changes slides (like PowerPoint)
-                if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30 && swipeTime < 500) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('📱 SLIDE SWIPE:', deltaX > 0 ? 'right (previous slide)' : 'left (next slide)');
-                    if (deltaX > 0) {
-                        goToPrevious(); // Swipe right - previous slide
-                    } else {
-                        goToNext(); // Swipe left - next slide
-                    }
-                    return;
-                }
-                // Tap for play/pause (secondary)
-                else if (Math.abs(deltaX) < 30 && Math.abs(deltaY) < 30 && swipeTime < 200 && !isOnArrow) {
-                    console.log('📱 SLIDE TAP - play/pause');
-                    togglePlayPause();
-                    showControlsTemporarily();
-                    return;
-                }
-            } else {
-                // NORMAL MODE: Standard swipe/tap behavior
-                if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance && swipeTime < maxSwipeTime) {
-                    e.preventDefault();
-                    console.log('Normal swipe:', deltaX > 0 ? 'right (previous)' : 'left (next)');
-                    if (deltaX > 0) {
-                        goToPrevious();
-                    } else {
-                        goToNext();
-                    }
-                }
-                // Tap for play/pause (but not on arrows)
-                else if (Math.abs(deltaX) < 30 && Math.abs(deltaY) < 30 && swipeTime < 200 && !isOnArrow) {
-                    console.log('Normal tap');
-                    togglePlayPause();
-                    if (isFullscreen) {
-                        showControlsTemporarily();
-                    }
-                }
-            }
-        }
-
-        // Handle keyboard events
-        function handleKeyPress(e) {
-            switch(e.key) {
-                case ' ':
-                    e.preventDefault();
-                    togglePlayPause();
-                    break;
-                case 'ArrowLeft':
-                    goToPrevious();
-                    break;
-                case 'ArrowRight':
-                    goToNext();
-                    break;
-                case 'f':
-                    toggleFullscreen();
-                    break;
-                case 'm':
-                    toggleMute();
-                    break;
-            }
-        }
-
-        // Event listeners
-        playBtn.addEventListener('click', togglePlayPause);
-        prevBtn.addEventListener('click', goToPrevious);
-        nextBtn.addEventListener('click', goToNext);
-        muteBtn.addEventListener('click', toggleMute);
-        fullscreenBtn.addEventListener('click', toggleFullscreen);
-        
-        // Navigation arrows - prevent control panel from showing
-        document.getElementById('prevArrow').addEventListener('click', (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            console.log('Previous arrow clicked');
-            goToPrevious();
-        });
-        document.getElementById('nextArrow').addEventListener('click', (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            console.log('Next arrow clicked');
-            goToNext();
-        });
-        
-        // Volume controls
-        volumeSlider.addEventListener('input', handleVolumeChange);
-        
-        dropdownButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            toggleDropdown();
-        });
-
-        // Video events
-        mainVideo.addEventListener('play', () => {
-            isPlaying = true;
-            updatePlayButton();
-        });
-
-        mainVideo.addEventListener('pause', () => {
-            isPlaying = false;
-            updatePlayButton();
-        });
-
-        mainVideo.addEventListener('loadeddata', () => {
-            loadingState.classList.add('hidden');
-        });
-
-        mainVideo.addEventListener('loadedmetadata', () => {
-            // Video metadata loaded
-        });
-
-        mainVideo.addEventListener('ended', () => {
-            isPlaying = false;
-            updatePlayButton();
-        });
-
-        // Touch events and mobile setup
-        function addTouchEvents() {
-            console.log('Adding touch events, isMobile:', isMobile);
-            if (isMobile) {
-                // Navigation arrows will be shown only in fullscreen mode via CSS
-                
-                // Add touch events to video container only (avoid duplicates)
-                videoContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
-                videoContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
-                
-                console.log('Touch events added successfully');
-            }
-        }
-
-        // Click to play/pause
-        videoContainer.addEventListener('click', (e) => {
-            if (e.target === mainVideo) {
-                togglePlayPause();
-                showControlsTemporarily();
-            }
-        });
-
-        // Keyboard events
-        document.addEventListener('keydown', handleKeyPress);
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.dropdown-button-container') && showDropdown) {
-                toggleDropdown();
-            }
-        });
-
-        // Fullscreen events
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-        document.addEventListener('msfullscreenchange', handleFullscreenChange);
-        
-        // Orientation change events for mobile
-        function addOrientationEvents() {
-            if (isMobile) {
-                screen.orientation?.addEventListener('change', handleOrientationChange);
-                window.addEventListener('orientationchange', handleOrientationChange);
-            }
-        }
-
-        // Mouse move shows controls
-        document.addEventListener('mousemove', showControlsTemporarily);
-
-        // Initialize with speed optimizations
-        function initialize() {
-            detectMobile();
-            addTouchEvents();
-            addOrientationEvents();
-            generateChapterList();
-            
-            // Start preloading first few videos
-            preloadAdjacentVideos(0);
-            loadVideo(0);
-            updateControls();
-            
-            // Debug: Check if navigation arrows exist
-            const navArrows = document.querySelector('.navigation-arrows');
-            const prevArrow = document.getElementById('prevArrow');
-            const nextArrow = document.getElementById('nextArrow');
-            
-            console.log('🎬 VAMPUCA SLIDE PLAYER INITIALIZED');
-            console.log('📱 Mobile device:', isMobile);
-            console.log('🎯 Navigation arrows found:', !!navArrows);
-            console.log('⬅️ Previous arrow found:', !!prevArrow);
-            console.log('➡️ Next arrow found:', !!nextArrow);
-            console.log('📋 SLIDE NAVIGATION MODE: Arrows visible only in mobile fullscreen');
-            console.log('🔄 Swipe behavior: Optimized for slide navigation (30px threshold, 500ms)');
-            
-            mainVideo.volume = 0.5;
-            volumeSlider.value = 50;
-            // Enable mobile swipe after DOM is ready and all elements exist
-            enableMobileSwipe();
-        }
-
-        // Add connection speed detection for optimal preloading
-        function getConnectionSpeed() {
-            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-            if (connection) {
-                const effectiveType = connection.effectiveType;
-                console.log('Connection type:', effectiveType);
-                
-                // Adjust preload strategy based on connection
-                if (effectiveType === '4g') {
-                    return 'fast';
-                } else if (effectiveType === '3g') {
-                    return 'medium';
-                } else {
-                    return 'slow';
-                }
-            }
-            return 'unknown';
-        }
-
-        // Start when page loads
-        document.addEventListener('DOMContentLoaded', initialize);
-
-        // Add after DOMContentLoaded/init
+        const overlay = document.getElementById('mobileSwipeOverlay');
+        // --- State ---
+        let currentSlide = 0;
+        let isPlaying = false;
+        let isMuted = false; // Sound ON by default
+        let showDropdown = false;
+        let controlsTimeout;
+        // --- Overlay and Hammer.js swipe logic ---
         function enableMobileSwipe() {
-            if (!isMobile) return;
-            var overlay = document.getElementById('mobileSwipeOverlay');
-            overlay.style.display = 'block';
-            // Use Hammer.js for swipe detection
-            var hammer = new Hammer(overlay);
-            hammer.on('swipeleft', function() {
-                console.log('Hammer.js swipeleft');
-                goToNext();
-            });
-            hammer.on('swiperight', function() {
-                console.log('Hammer.js swiperight');
-                goToPrevious();
-            });
-            // Fallback: minimal custom swipe if Hammer.js fails
-            let startX = 0, startY = 0, startTime = 0;
-            overlay.addEventListener('touchstart', function(e) {
-                const t = e.touches[0];
-                startX = t.clientX;
-                startY = t.clientY;
-                startTime = Date.now();
-            });
-            overlay.addEventListener('touchend', function(e) {
-                const t = e.changedTouches[0];
-                const dx = t.clientX - startX;
-                const dy = t.clientY - startY;
-                const dt = Date.now() - startTime;
-                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 30 && dt < 500) {
-                    if (dx < 0) {
-                        console.log('Custom swipeleft');
-                        goToNext();
-                    } else {
-                        console.log('Custom swiperight');
-                        goToPrevious();
-                    }
+            if (!isReallyMobile()) {
+                overlay.style.display = 'none';
+                overlay.style.pointerEvents = 'none';
+                // Remove Hammer.js handlers if any
+                if (overlay._hammer) {
+                    overlay._hammer.destroy();
+                    overlay._hammer = null;
                 }
-            });
+                return;
+            }
+            overlay.style.display = 'block';
+            overlay.style.pointerEvents = 'auto';
+            overlay.style.background = 'transparent';
+            overlay.style.zIndex = 1000;
+            if (!overlay._hammer) {
+                var hammer = new Hammer(overlay);
+                overlay._hammer = hammer;
+                hammer.on('swipeleft', function() { goToNext(); });
+                hammer.on('swiperight', function() { goToPrevious(); });
+            }
             // Prevent native fullscreen on mobile
             mainVideo.addEventListener('webkitbeginfullscreen', function(e) {
                 e.preventDefault();
@@ -1482,37 +841,219 @@
                 return false;
             });
         }
-        // Patch enterFullscreen to avoid native video fullscreen on mobile
-        function enterFullscreen() {
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-            if (isMobile) {
-                // Only use container fullscreen on mobile
-                if (playerContainer.requestFullscreen) {
-                    playerContainer.requestFullscreen();
-                } else if (playerContainer.webkitRequestFullscreen) {
-                    playerContainer.webkitRequestFullscreen();
-                } else if (playerContainer.msRequestFullscreen) {
-                    playerContainer.msRequestFullscreen();
+        // Update overlay state on resize/orientation change
+        window.addEventListener('resize', enableMobileSwipe);
+        window.addEventListener('orientationchange', enableMobileSwipe);
+        // --- Load video and always show first frame ---
+        function loadVideo(index, autoplay = false) {
+            if (index < 0 || index >= videoSources.length) return;
+            currentSlide = index;
+            isPlaying = false;
+            loadingState.classList.remove('hidden');
+            const chapterTitle = videoSources[index].title;
+            loadingText.textContent = `Loading ${chapterTitle}...`;
+            mainVideo.pause();
+            // Set src, load, and reset to first frame
+            const videoSrc = videoSources[index].src;
+            if (mainVideo.src !== videoSrc) {
+                mainVideo.src = videoSrc;
+                mainVideo.load();
+            }
+            mainVideo.currentTime = 0;
+            mainVideo.muted = isMuted; // Always use current mute state (default: false)
+            // Show first frame after loadeddata
+            mainVideo.addEventListener('loadeddata', function onLoaded() {
+                mainVideo.removeEventListener('loadeddata', onLoaded);
+                mainVideo.currentTime = 0;
+                loadingState.classList.add('hidden');
+                if (autoplay) {
+                    mainVideo.play().catch(()=>{});
+                    isPlaying = true;
+                    updatePlayButton();
                 }
-            } else if (isIOS && isSafari) {
-                // iOS Safari fallback (desktop)
-                if (mainVideo.webkitEnterFullscreen) {
-                    mainVideo.webkitEnterFullscreen();
-                } else if (mainVideo.webkitRequestFullscreen) {
-                    mainVideo.webkitRequestFullscreen();
-                }
+            });
+            updateSlideCounter();
+            updateChapterList();
+            updateControls();
+        }
+        // --- Controls logic ---
+        function updatePlayButton() {
+            if (isPlaying) {
+                playIcon.classList.add('hidden');
+                pauseIcon.classList.remove('hidden');
             } else {
-                // Standard browsers - use Fullscreen API
-                if (playerContainer.requestFullscreen) {
-                    playerContainer.requestFullscreen();
-                } else if (playerContainer.webkitRequestFullscreen) {
-                    playerContainer.webkitRequestFullscreen();
-                } else if (playerContainer.msRequestFullscreen) {
-                    playerContainer.msRequestFullscreen();
-                }
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
             }
         }
+        function updateMuteButton() {
+            if (isMuted) {
+                muteIcon.classList.add('hidden');
+                mutedIcon.classList.remove('hidden');
+            } else {
+                muteIcon.classList.remove('hidden');
+                mutedIcon.classList.add('hidden');
+            }
+        }
+        function updateSlideCounter() {
+            let displayText;
+            if (currentSlide === 0) {
+                displayText = 'Title';
+            } else if (currentSlide === videoSources.length - 1) {
+                displayText = 'End';
+            } else {
+                displayText = `Chapter ${currentSlide}`;
+            }
+            slideCounter.textContent = `${displayText} / ${videoSources.length}`;
+        }
+        function updateChapterList() {
+            const items = chapterList.querySelectorAll('.chapter-item');
+            items.forEach((item, index) => {
+                if (index === currentSlide) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+        function updateControls() {
+            prevBtn.style.display = currentSlide === 0 ? 'none' : 'flex';
+            playBtn.style.display = currentSlide === 0 ? 'none' : 'flex';
+            nextBtn.style.display = currentSlide === videoSources.length - 1 ? 'none' : 'flex';
+        }
+        // --- Generate chapter list ---
+        function generateChapterList() {
+            chapterList.innerHTML = '';
+            videoSources.forEach((video, index) => {
+                const button = document.createElement('button');
+                button.className = 'chapter-item';
+                button.innerHTML = `
+                    <span>${video.title}</span>
+                    <span class="chapter-indicator">›</span>
+                `;
+                button.addEventListener('click', () => {
+                    loadVideo(index, true);
+                    toggleDropdown();
+                });
+                chapterList.appendChild(button);
+            });
+        }
+        // --- Navigation logic ---
+        function goToPrevious() {
+            if (currentSlide > 0) {
+                loadVideo(currentSlide - 1, true);
+            }
+        }
+        function goToNext() {
+            if (currentSlide < videoSources.length - 1) {
+                loadVideo(currentSlide + 1, true);
+            }
+        }
+        // --- Play/pause/mute handlers ---
+        playBtn.addEventListener('click', function() {
+            if (isPlaying) {
+                mainVideo.pause();
+                isPlaying = false;
+            } else {
+                // Unmute on user interaction
+                if (isMuted) {
+                    isMuted = false;
+                    mainVideo.muted = false;
+                    updateMuteButton();
+                }
+                mainVideo.play().catch(()=>{});
+                isPlaying = true;
+            }
+            updatePlayButton();
+        });
+        muteBtn.addEventListener('click', function() {
+            isMuted = !isMuted;
+            mainVideo.muted = isMuted;
+            updateMuteButton();
+        });
+        volumeSlider.addEventListener('input', function(e) {
+            const v = e.target.value / 100;
+            mainVideo.volume = v;
+            isMuted = v === 0;
+            mainVideo.muted = isMuted;
+            updateMuteButton();
+        });
+        // --- Fullscreen logic (unchanged) ---
+        fullscreenBtn.addEventListener('click', function() {
+            if (!document.fullscreenElement) {
+                playerContainer.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        });
+        // --- Dropdown logic: always clickable on desktop ---
+        dropdownButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown();
+            if (isReallyMobile()) overlay.style.display = showDropdown ? 'none' : 'block';
+        });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.dropdown-button-container') && showDropdown) {
+                toggleDropdown();
+                if (isReallyMobile()) overlay.style.display = 'block';
+            }
+        });
+        // --- Controls always clickable on desktop ---
+        // (No changes needed if overlay pointer-events:none on desktop)
+        // --- Controls auto-hide on desktop ---
+        function showControlsTemporarily() {
+            controlsContainer.classList.remove('hidden');
+            console.log('Controls shown');
+            clearTimeout(controlsTimeout);
+            controlsTimeout = setTimeout(() => {
+                controlsContainer.classList.add('hidden');
+                console.log('Controls hidden');
+            }, 1500);
+        }
+        document.addEventListener('mousemove', showControlsTemporarily);
+        document.addEventListener('touchstart', showControlsTemporarily);
+        videoContainer.addEventListener('click', showControlsTemporarily);
+        // --- Arrow button handlers ---
+        prevBtn.addEventListener('click', function(e) {
+            console.log('Prev arrow clicked');
+            goToPrevious();
+        });
+        nextBtn.addEventListener('click', function(e) {
+            console.log('Next arrow clicked');
+            goToNext();
+        });
+        // --- Keyboard navigation ---
+        document.addEventListener('keydown', function(e) {
+            if (e.key === ' ' || e.key === 'Spacebar') {
+                playBtn.click();
+                e.preventDefault();
+            } else if (e.key === 'ArrowLeft') {
+                prevBtn.click();
+            } else if (e.key === 'ArrowRight') {
+                nextBtn.click();
+            } else if (e.key === 'f') {
+                fullscreenBtn.click();
+            } else if (e.key === 'm') {
+                muteBtn.click();
+            }
+        });
+        // --- Dropdown logic ---
+        function toggleDropdown() {
+            showDropdown = !showDropdown;
+            if (showDropdown) {
+                dropdownMenu.classList.add('visible');
+            } else {
+                dropdownMenu.classList.remove('visible');
+            }
+        }
+        // --- Initialization ---
+        function initialize() {
+            enableMobileSwipe();
+            generateChapterList();
+            loadVideo(0); // Always start with Title slide
+            showControlsTemporarily(); // Always show controls at start
+        }
+        document.addEventListener('DOMContentLoaded', initialize);
     </script>
 </body>
 </html>
