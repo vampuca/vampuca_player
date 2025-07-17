@@ -668,13 +668,13 @@
 
         <!-- Main Video Container -->
         <div class="video-container" id="videoContainer">
-            <video id="mainVideo" class="main-video" preload="metadata" playsinline webkit-playsinline muted></video>
+            <video id="mainVideo" class="main-video" preload="none" playsinline webkit-playsinline muted></video>
             
             <!-- Loading State -->
             <div id="loadingState" class="loading-state hidden">
                 <div>
                     <div class="loading-spinner"></div>
-                    <div class="loading-text">Loading...</div>
+                    <div class="loading-text" id="loadingText">Loading...</div>
                 </div>
             </div>
 
@@ -789,6 +789,7 @@
         const videoContainer = document.getElementById('videoContainer');
         const mainVideo = document.getElementById('mainVideo');
         const loadingState = document.getElementById('loadingState');
+        const loadingText = document.getElementById('loadingText');
         const controlsContainer = document.getElementById('controlsContainer');
         const playBtn = document.getElementById('playBtn');
         const prevBtn = document.getElementById('prevBtn');
@@ -812,18 +813,35 @@
             console.log('Mobile detected:', isMobile);
         }
 
-        // Preload next video
+        // Aggressive preload for next and previous videos
         function preloadNextVideo(nextIndex) {
             if (nextIndex >= 0 && nextIndex < videoSources.length) {
                 if (!preloadRef) {
                     preloadRef = document.createElement('video');
                 }
                 preloadRef.src = videoSources[nextIndex].src;
-                preloadRef.preload = 'metadata';
+                preloadRef.preload = 'auto'; // More aggressive preloading
+                preloadRef.load(); // Force load
             }
         }
 
-        // Load video function
+        // Preload adjacent videos (previous and next)
+        function preloadAdjacentVideos(currentIndex) {
+            // Preload next video
+            if (currentIndex + 1 < videoSources.length) {
+                preloadNextVideo(currentIndex + 1);
+            }
+            
+            // Preload previous video
+            if (currentIndex - 1 >= 0) {
+                const prevVideo = document.createElement('video');
+                prevVideo.src = videoSources[currentIndex - 1].src;
+                prevVideo.preload = 'metadata';
+                prevVideo.load();
+            }
+        }
+
+        // Load video function with enhanced loading feedback
         function loadVideo(index, autoplay = false) {
             if (index < 0 || index >= videoSources.length) return;
             
@@ -833,21 +851,48 @@
             isPlaying = false;
             loadingState.classList.remove('hidden');
             
+            // Update loading text with chapter info
+            const chapterTitle = videoSources[index].title;
+            loadingText.textContent = `Loading ${chapterTitle}...`;
+            
             // Stop current video
             mainVideo.pause();
             mainVideo.currentTime = 0;
             
-            // Load new video with force reload
-            mainVideo.src = videoSources[index].src + '?t=' + Date.now();
-            mainVideo.muted = isMuted;
-            mainVideo.load();
+            // Load new video with cache busting only when needed
+            const videoSrc = videoSources[index].src;
+            if (mainVideo.src !== videoSrc) {
+                mainVideo.src = videoSrc;
+                mainVideo.muted = isMuted;
+                mainVideo.load();
+            }
             
-            // Preload next video
-            preloadNextVideo(index + 1);
+            // Show loading progress
+            let loadingProgress = 0;
+            const loadingInterval = setInterval(() => {
+                loadingProgress += 10;
+                if (loadingProgress <= 90) {
+                    loadingText.textContent = `Loading ${chapterTitle}... ${loadingProgress}%`;
+                } else {
+                    clearInterval(loadingInterval);
+                }
+            }, 100);
+            
+            // Preload adjacent videos
+            preloadAdjacentVideos(index);
             
             updateSlideCounter();
             updateChapterList();
             updateControls();
+            
+            // Clear loading on video ready
+            mainVideo.addEventListener('loadeddata', () => {
+                clearInterval(loadingInterval);
+                loadingText.textContent = `${chapterTitle} ready!`;
+                setTimeout(() => {
+                    loadingState.classList.add('hidden');
+                }, 300);
+            }, { once: true });
             
             // Handle autoplay
             if (autoplay) {
@@ -1293,12 +1338,15 @@
         // Mouse move shows controls
         document.addEventListener('mousemove', showControlsTemporarily);
 
-        // Initialize
+        // Initialize with speed optimizations
         function initialize() {
             detectMobile();
             addTouchEvents();
             addOrientationEvents();
             generateChapterList();
+            
+            // Start preloading first few videos
+            preloadAdjacentVideos(0);
             loadVideo(0);
             updateControls();
             
@@ -1311,6 +1359,28 @@
             console.log('Previous arrow found:', !!prevArrow);
             console.log('Next arrow found:', !!nextArrow);
             console.log('Navigation arrows will be shown only in fullscreen mode');
+            
+            mainVideo.volume = 0.5;
+            volumeSlider.value = 50;
+        }
+
+        // Add connection speed detection for optimal preloading
+        function getConnectionSpeed() {
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            if (connection) {
+                const effectiveType = connection.effectiveType;
+                console.log('Connection type:', effectiveType);
+                
+                // Adjust preload strategy based on connection
+                if (effectiveType === '4g') {
+                    return 'fast';
+                } else if (effectiveType === '3g') {
+                    return 'medium';
+                } else {
+                    return 'slow';
+                }
+            }
+            return 'unknown';
         }
 
         // Start when page loads
