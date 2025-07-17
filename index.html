@@ -770,6 +770,7 @@
         let controlsTimeout;
         let touchStartX = 0;
         let touchStartY = 0;
+        let touchStartTime = 0;
         let isMobile = false;
         let preloadRef = null;
 
@@ -993,14 +994,31 @@
             }
         }
 
-        // Enter fullscreen
+        // Enter fullscreen with iOS Safari support
         function enterFullscreen() {
-            if (playerContainer.requestFullscreen) {
-                playerContainer.requestFullscreen();
-            } else if (playerContainer.webkitRequestFullscreen) {
-                playerContainer.webkitRequestFullscreen();
-            } else if (playerContainer.msRequestFullscreen) {
-                playerContainer.msRequestFullscreen();
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            
+            if (isIOS && isSafari) {
+                // iOS Safari - use webkit video fullscreen
+                if (mainVideo.webkitEnterFullscreen) {
+                    mainVideo.webkitEnterFullscreen();
+                } else if (mainVideo.webkitRequestFullscreen) {
+                    mainVideo.webkitRequestFullscreen();
+                }
+            } else {
+                // Standard browsers - use Fullscreen API
+                if (playerContainer.requestFullscreen) {
+                    playerContainer.requestFullscreen().then(() => {
+                        lockLandscapeOrientation();
+                    });
+                } else if (playerContainer.webkitRequestFullscreen) {
+                    playerContainer.webkitRequestFullscreen();
+                    lockLandscapeOrientation();
+                } else if (playerContainer.msRequestFullscreen) {
+                    playerContainer.msRequestFullscreen();
+                    lockLandscapeOrientation();
+                }
             }
         }
 
@@ -1015,6 +1033,15 @@
             }
         }
 
+        // Lock orientation to landscape (Android/Chrome only)
+        function lockLandscapeOrientation() {
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape-primary').catch(err => {
+                    console.log('Orientation lock failed:', err);
+                });
+            }
+        }
+
         // Handle fullscreen change
         function handleFullscreenChange() {
             isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
@@ -1026,6 +1053,26 @@
                 controlsContainer.classList.remove('hidden');
                 controlsVisible = true;
             }
+        }
+
+        // Handle orientation change for mobile devices
+        function handleOrientationChange() {
+            if (!isMobile) return;
+            
+            // Delay to ensure orientation change is complete
+            setTimeout(() => {
+                const orientation = screen.orientation?.type || window.orientation;
+                const isLandscape = orientation?.includes('landscape') || Math.abs(window.orientation) === 90;
+                
+                // Only for non-iOS devices (iOS Safari handles fullscreen differently)
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+                
+                if (isLandscape && !isFullscreen && isPlaying && !(isIOS && isSafari)) {
+                    // Auto-enter fullscreen when rotated to landscape
+                    enterFullscreen();
+                }
+            }, 100);
         }
 
         // Show controls temporarily
@@ -1048,30 +1095,39 @@
         function handleTouchStart(e) {
             // Prevent default to ensure touch events work in fullscreen
             e.preventDefault();
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
+            const touch = e.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+            touchStartTime = Date.now();
         }
 
         // Handle touch end
         function handleTouchEnd(e) {
             // Prevent default to ensure touch events work in fullscreen
             e.preventDefault();
-            const touchEndX = e.changedTouches[0].clientX;
-            const touchEndY = e.changedTouches[0].clientY;
+            const touch = e.changedTouches[0];
+            const touchEndX = touch.clientX;
+            const touchEndY = touch.clientY;
+            const touchEndTime = Date.now();
             const deltaX = touchEndX - touchStartX;
             const deltaY = touchEndY - touchStartY;
+            const swipeTime = touchEndTime - touchStartTime;
             const minSwipeDistance = 50;
+            const maxSwipeTime = 300;
 
-            // Horizontal swipe
-            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+            // Check if touch is on navigation arrows (avoid showing controls)
+            const isOnArrow = e.target.closest('.nav-arrow');
+            
+            // Horizontal swipe for navigation
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance && swipeTime < maxSwipeTime) {
                 if (deltaX > 0) {
                     goToPrevious(); // Swipe right - go back
                 } else {
                     goToNext(); // Swipe left - go forward
                 }
             }
-            // Tap
-            else if (Math.abs(deltaX) < 30 && Math.abs(deltaY) < 30) {
+            // Tap for play/pause (but not on arrows)
+            else if (Math.abs(deltaX) < 30 && Math.abs(deltaY) < 30 && swipeTime < 200 && !isOnArrow) {
                 togglePlayPause();
                 // Show controls temporarily in fullscreen mode
                 if (isFullscreen) {
@@ -1109,9 +1165,15 @@
         muteBtn.addEventListener('click', toggleMute);
         fullscreenBtn.addEventListener('click', toggleFullscreen);
         
-        // Navigation arrows
-        document.getElementById('prevArrow').addEventListener('click', goToPrevious);
-        document.getElementById('nextArrow').addEventListener('click', goToNext);
+        // Navigation arrows - prevent control panel from showing
+        document.getElementById('prevArrow').addEventListener('click', (e) => {
+            e.stopPropagation();
+            goToPrevious();
+        });
+        document.getElementById('nextArrow').addEventListener('click', (e) => {
+            e.stopPropagation();
+            goToNext();
+        });
         
         // Volume controls
         volumeSlider.addEventListener('input', handleVolumeChange);
@@ -1181,6 +1243,12 @@
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
         document.addEventListener('msfullscreenchange', handleFullscreenChange);
+        
+        // Orientation change events for mobile
+        if (isMobile) {
+            screen.orientation?.addEventListener('change', handleOrientationChange);
+            window.addEventListener('orientationchange', handleOrientationChange);
+        }
 
         // Mouse move shows controls
         document.addEventListener('mousemove', showControlsTemporarily);
