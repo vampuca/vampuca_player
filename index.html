@@ -679,7 +679,8 @@
         <!-- Main Video Container -->
         <div class="video-container" id="videoContainer">
             <video id="mainVideo" class="main-video" preload="none" playsinline webkit-playsinline muted></video>
-            
+            <!-- Mobile swipe overlay -->
+            <div id="mobileSwipeOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:20;display:none;"></div>
             <!-- Loading State -->
             <div id="loadingState" class="loading-state hidden">
                 <div>
@@ -759,6 +760,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
     <script>
         // Video sources with correct GitHub URLs
         const videoSources = [
@@ -1404,6 +1406,8 @@
             
             mainVideo.volume = 0.5;
             volumeSlider.value = 50;
+            // Enable mobile swipe after DOM is ready and all elements exist
+            enableMobileSwipe();
         }
 
         // Add connection speed detection for optimal preloading
@@ -1427,6 +1431,88 @@
 
         // Start when page loads
         document.addEventListener('DOMContentLoaded', initialize);
+
+        // Add after DOMContentLoaded/init
+        function enableMobileSwipe() {
+            if (!isMobile) return;
+            var overlay = document.getElementById('mobileSwipeOverlay');
+            overlay.style.display = 'block';
+            // Use Hammer.js for swipe detection
+            var hammer = new Hammer(overlay);
+            hammer.on('swipeleft', function() {
+                console.log('Hammer.js swipeleft');
+                goToNext();
+            });
+            hammer.on('swiperight', function() {
+                console.log('Hammer.js swiperight');
+                goToPrevious();
+            });
+            // Fallback: minimal custom swipe if Hammer.js fails
+            let startX = 0, startY = 0, startTime = 0;
+            overlay.addEventListener('touchstart', function(e) {
+                const t = e.touches[0];
+                startX = t.clientX;
+                startY = t.clientY;
+                startTime = Date.now();
+            });
+            overlay.addEventListener('touchend', function(e) {
+                const t = e.changedTouches[0];
+                const dx = t.clientX - startX;
+                const dy = t.clientY - startY;
+                const dt = Date.now() - startTime;
+                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 30 && dt < 500) {
+                    if (dx < 0) {
+                        console.log('Custom swipeleft');
+                        goToNext();
+                    } else {
+                        console.log('Custom swiperight');
+                        goToPrevious();
+                    }
+                }
+            });
+            // Prevent native fullscreen on mobile
+            mainVideo.addEventListener('webkitbeginfullscreen', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            });
+            // Prevent long-press download/save on video
+            mainVideo.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                return false;
+            });
+        }
+        // Patch enterFullscreen to avoid native video fullscreen on mobile
+        function enterFullscreen() {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            if (isMobile) {
+                // Only use container fullscreen on mobile
+                if (playerContainer.requestFullscreen) {
+                    playerContainer.requestFullscreen();
+                } else if (playerContainer.webkitRequestFullscreen) {
+                    playerContainer.webkitRequestFullscreen();
+                } else if (playerContainer.msRequestFullscreen) {
+                    playerContainer.msRequestFullscreen();
+                }
+            } else if (isIOS && isSafari) {
+                // iOS Safari fallback (desktop)
+                if (mainVideo.webkitEnterFullscreen) {
+                    mainVideo.webkitEnterFullscreen();
+                } else if (mainVideo.webkitRequestFullscreen) {
+                    mainVideo.webkitRequestFullscreen();
+                }
+            } else {
+                // Standard browsers - use Fullscreen API
+                if (playerContainer.requestFullscreen) {
+                    playerContainer.requestFullscreen();
+                } else if (playerContainer.webkitRequestFullscreen) {
+                    playerContainer.webkitRequestFullscreen();
+                } else if (playerContainer.msRequestFullscreen) {
+                    playerContainer.msRequestFullscreen();
+                }
+            }
+        }
     </script>
 </body>
 </html>
