@@ -504,7 +504,7 @@
             touch-action: manipulation;
         }
 
-        /* Navigation Arrows - ONLY in fullscreen mode */
+        /* Navigation Arrows - MOBILE FULLSCREEN SLIDE NAVIGATION */
         .navigation-arrows {
             position: absolute;
             top: 0;
@@ -512,7 +512,7 @@
             right: 0;
             bottom: 0;
             pointer-events: none;
-            z-index: 30;
+            z-index: 999;
             display: none; /* Hidden by default */
         }
 
@@ -520,13 +520,13 @@
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            width: 35px;
-            height: 35px;
-            background: rgba(255, 255, 255, 0.8);
-            border: 1px solid white;
+            width: 45px;
+            height: 45px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid hsl(14,100%,60%);
             border-radius: 50%;
-            color: black;
-            font-size: 16px;
+            color: #333;
+            font-size: 18px;
             cursor: pointer;
             transition: all 0.3s ease;
             pointer-events: auto;
@@ -534,10 +534,11 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 1000;
         }
 
-        .nav-arrow:hover,
-        .nav-arrow:active {
+        .nav-arrow:hover {
             background: hsl(14,100%,60%);
             color: white;
             transform: translateY(-50%) scale(1.1);
@@ -555,11 +556,20 @@
             right: 20px;
         }
 
-        /* Show navigation arrows ONLY in fullscreen mode */
-        .player-container:fullscreen .navigation-arrows,
-        .player-container:-webkit-full-screen .navigation-arrows,
-        .player-container:-moz-full-screen .navigation-arrows {
-            display: block !important;
+        /* MOBILE FULLSCREEN: Show navigation arrows like slides */
+        @media (max-width: 768px) {
+            .player-container:fullscreen .navigation-arrows,
+            .player-container:-webkit-full-screen .navigation-arrows,
+            .player-container:-moz-full-screen .navigation-arrows {
+                display: block !important;
+            }
+        }
+
+        /* DESKTOP: Never show arrows */
+        @media (min-width: 769px) {
+            .navigation-arrows {
+                display: none !important;
+            }
         }
 
         /* Credits slide styling */
@@ -1097,20 +1107,27 @@
             }
         }
 
-        // Handle fullscreen change
+        // Handle fullscreen change - SLIDE NAVIGATION MODE
         function handleFullscreenChange() {
             isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
             
-            // Show navigation arrows ONLY in fullscreen mode on mobile
-            const navArrows = document.querySelector('.navigation-arrows');
-            if (navArrows) {
-                if (isFullscreen && isMobile) {
-                    console.log('Showing navigation arrows - fullscreen + mobile');
+            console.log('Fullscreen changed:', isFullscreen);
+            console.log('Mobile device:', isMobile);
+            console.log('SLIDE NAVIGATION MODE:', isFullscreen && isMobile ? 'ACTIVATED' : 'DEACTIVATED');
+            
+            // Mobile fullscreen = slide navigation mode (CSS handles arrow visibility)
+            if (isFullscreen && isMobile) {
+                console.log('🎬 SLIDE NAVIGATION MODE ACTIVATED - Arrows should be visible!');
+                // Force show arrows on mobile fullscreen
+                const navArrows = document.querySelector('.navigation-arrows');
+                if (navArrows) {
                     navArrows.style.display = 'block';
-                } else {
-                    console.log('Hiding navigation arrows - not fullscreen or not mobile');
-                    navArrows.style.display = 'none';
+                    navArrows.style.opacity = '1';
+                    navArrows.style.visibility = 'visible';
+                    console.log('Navigation arrows forced visible');
                 }
+            } else {
+                console.log('Normal video mode');
             }
             
             if (isFullscreen && isPlaying) {
@@ -1194,23 +1211,45 @@
             // Check if touch is on navigation arrows (avoid showing controls)
             const isOnArrow = e.target.closest('.nav-arrow');
             
-            // Horizontal swipe for navigation
-            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance && swipeTime < maxSwipeTime) {
-                e.preventDefault(); // Prevent default browser behavior
-                console.log('Swipe detected:', deltaX > 0 ? 'right (previous)' : 'left (next)');
-                if (deltaX > 0) {
-                    goToPrevious(); // Swipe right - go back
-                } else {
-                    goToNext(); // Swipe left - go forward
+            // MOBILE FULLSCREEN = SLIDE NAVIGATION MODE
+            if (isFullscreen && isMobile) {
+                // SLIDE NAVIGATION: Horizontal swipe changes slides (like PowerPoint)
+                if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30 && swipeTime < 500) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('📱 SLIDE SWIPE:', deltaX > 0 ? 'right (previous slide)' : 'left (next slide)');
+                    if (deltaX > 0) {
+                        goToPrevious(); // Swipe right - previous slide
+                    } else {
+                        goToNext(); // Swipe left - next slide
+                    }
+                    return;
                 }
-            }
-            // Tap for play/pause (but not on arrows)
-            else if (Math.abs(deltaX) < 30 && Math.abs(deltaY) < 30 && swipeTime < 200 && !isOnArrow) {
-                console.log('Tap detected');
-                togglePlayPause();
-                // Show controls temporarily in fullscreen mode
-                if (isFullscreen) {
+                // Tap for play/pause (secondary)
+                else if (Math.abs(deltaX) < 30 && Math.abs(deltaY) < 30 && swipeTime < 200 && !isOnArrow) {
+                    console.log('📱 SLIDE TAP - play/pause');
+                    togglePlayPause();
                     showControlsTemporarily();
+                    return;
+                }
+            } else {
+                // NORMAL MODE: Standard swipe/tap behavior
+                if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance && swipeTime < maxSwipeTime) {
+                    e.preventDefault();
+                    console.log('Normal swipe:', deltaX > 0 ? 'right (previous)' : 'left (next)');
+                    if (deltaX > 0) {
+                        goToPrevious();
+                    } else {
+                        goToNext();
+                    }
+                }
+                // Tap for play/pause (but not on arrows)
+                else if (Math.abs(deltaX) < 30 && Math.abs(deltaY) < 30 && swipeTime < 200 && !isOnArrow) {
+                    console.log('Normal tap');
+                    togglePlayPause();
+                    if (isFullscreen) {
+                        showControlsTemporarily();
+                    }
                 }
             }
         }
@@ -1355,10 +1394,13 @@
             const prevArrow = document.getElementById('prevArrow');
             const nextArrow = document.getElementById('nextArrow');
             
-            console.log('Navigation arrows found:', !!navArrows);
-            console.log('Previous arrow found:', !!prevArrow);
-            console.log('Next arrow found:', !!nextArrow);
-            console.log('Navigation arrows will be shown only in fullscreen mode');
+            console.log('🎬 VAMPUCA SLIDE PLAYER INITIALIZED');
+            console.log('📱 Mobile device:', isMobile);
+            console.log('🎯 Navigation arrows found:', !!navArrows);
+            console.log('⬅️ Previous arrow found:', !!prevArrow);
+            console.log('➡️ Next arrow found:', !!nextArrow);
+            console.log('📋 SLIDE NAVIGATION MODE: Arrows visible only in mobile fullscreen');
+            console.log('🔄 Swipe behavior: Optimized for slide navigation (30px threshold, 500ms)');
             
             mainVideo.volume = 0.5;
             volumeSlider.value = 50;
