@@ -87,14 +87,33 @@
             border-radius: 0.5rem;
             border: 1px solid rgba(0,0,0,0.1);
             box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            max-height: 24rem;
+            max-height: 60vh;
             overflow-y: auto;
-            z-index: 100;
+            z-index: 1000;
             display: none;
         }
 
         .dropdown-menu.visible {
             display: block;
+        }
+
+        /* Стилизация прокрутки для выпадающего списка */
+        .dropdown-menu::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .dropdown-menu::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+            border-radius: 3px;
+        }
+
+        .dropdown-menu::-webkit-scrollbar-thumb {
+            background: rgba(255,133,51,0.6);
+            border-radius: 3px;
+        }
+
+        .dropdown-menu::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,133,51,0.8);
         }
 
         .dropdown-header {
@@ -415,6 +434,8 @@
                 width: 10rem;
                 right: -1rem;
                 left: auto;
+                max-height: 50vh;
+                overflow-y: auto;
             }
 
 
@@ -483,7 +504,7 @@
             touch-action: manipulation;
         }
 
-        /* Navigation Arrows - Only for mobile */
+        /* Navigation Arrows - ONLY in fullscreen mode */
         .navigation-arrows {
             position: absolute;
             top: 0;
@@ -492,20 +513,20 @@
             bottom: 0;
             pointer-events: none;
             z-index: 30;
-            display: none; /* Hidden by default on desktop */
+            display: none; /* Hidden by default */
         }
 
         .nav-arrow {
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            width: 60px;
-            height: 60px;
+            width: 35px;
+            height: 35px;
             background: rgba(255, 255, 255, 0.8);
-            border: 2px solid white;
+            border: 1px solid white;
             border-radius: 50%;
             color: black;
-            font-size: 24px;
+            font-size: 16px;
             cursor: pointer;
             transition: all 0.3s ease;
             pointer-events: auto;
@@ -534,23 +555,11 @@
             right: 20px;
         }
 
-        /* Show navigation arrows on mobile devices */
-        @media (max-width: 768px) {
-            .navigation-arrows {
-                display: block !important;
-            }
-        }
-
-        /* Touch-friendly mobile controls */
-        @media (hover: none) and (pointer: coarse) {
-            .navigation-arrows {
-                display: block !important;
-            }
-            
-            .nav-arrow {
-                min-width: 44px;
-                min-height: 44px;
-            }
+        /* Show navigation arrows ONLY in fullscreen mode */
+        .player-container:fullscreen .navigation-arrows,
+        .player-container:-webkit-full-screen .navigation-arrows,
+        .player-container:-moz-full-screen .navigation-arrows {
+            display: block !important;
         }
 
         /* Credits slide styling */
@@ -1047,10 +1056,16 @@
         function handleFullscreenChange() {
             isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
             
-            // Show navigation arrows in fullscreen on mobile
+            // Show navigation arrows ONLY in fullscreen mode on mobile
             const navArrows = document.querySelector('.navigation-arrows');
-            if (isMobile && navArrows) {
-                navArrows.style.display = 'block';
+            if (navArrows) {
+                if (isFullscreen && isMobile) {
+                    console.log('Showing navigation arrows - fullscreen + mobile');
+                    navArrows.style.display = 'block';
+                } else {
+                    console.log('Hiding navigation arrows - not fullscreen or not mobile');
+                    navArrows.style.display = 'none';
+                }
             }
             
             if (isFullscreen && isPlaying) {
@@ -1234,17 +1249,13 @@
         function addTouchEvents() {
             console.log('Adding touch events, isMobile:', isMobile);
             if (isMobile) {
-                // Force show navigation arrows on mobile
-                const navArrows = document.querySelector('.navigation-arrows');
-                if (navArrows) {
-                    navArrows.style.display = 'block';
-                }
+                // Navigation arrows will be shown only in fullscreen mode via CSS
                 
                 // Add touch events to video container only (avoid duplicates)
                 videoContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
                 videoContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
                 
-                console.log('Touch events and mobile navigation added successfully');
+                console.log('Touch events added successfully');
             }
         }
 
@@ -1299,11 +1310,7 @@
             console.log('Navigation arrows found:', !!navArrows);
             console.log('Previous arrow found:', !!prevArrow);
             console.log('Next arrow found:', !!nextArrow);
-            
-            if (isMobile && navArrows) {
-                console.log('Force showing navigation arrows for mobile');
-                navArrows.style.display = 'block';
-            }
+            console.log('Navigation arrows will be shown only in fullscreen mode');
         }
 
         // Start when page loads
