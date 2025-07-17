@@ -453,18 +453,40 @@
                 min-width: 44px;
                 min-height: 44px;
             }
+            
+            /* Fullscreen button - make it more prominent on mobile */
+            .fullscreen-button {
+                background: rgba(255, 133, 51, 0.2) !important;
+                border-color: rgba(255, 133, 51, 0.4) !important;
+                color: hsl(14,100%,60%) !important;
+            }
 
             /* Mobile fullscreen adjustments */
             .player-container:-webkit-full-screen {
                 background: black;
+                width: 100vw !important;
+                height: 100vh !important;
             }
 
             .player-container:-moz-full-screen {
                 background: black;
+                width: 100vw !important;
+                height: 100vh !important;
             }
 
             .player-container:fullscreen {
                 background: black;
+                width: 100vw !important;
+                height: 100vh !important;
+            }
+            
+            /* Video in fullscreen should fill screen */
+            .player-container:fullscreen video,
+            .player-container:-webkit-full-screen video,
+            .player-container:-moz-full-screen video {
+                width: 100vw !important;
+                height: 100vh !important;
+                object-fit: contain;
             }
         }
 
@@ -562,6 +584,32 @@
             .player-container:-webkit-full-screen .navigation-arrows,
             .player-container:-moz-full-screen .navigation-arrows {
                 display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                z-index: 1000 !important;
+            }
+            
+            /* Better touch targets for mobile */
+            .player-container:fullscreen .nav-arrow,
+            .player-container:-webkit-full-screen .nav-arrow,
+            .player-container:-moz-full-screen .nav-arrow {
+                width: 60px;
+                height: 60px;
+                font-size: 22px;
+                background: rgba(255, 255, 255, 0.95);
+                box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            }
+            
+            .player-container:fullscreen .nav-arrow.left,
+            .player-container:-webkit-full-screen .nav-arrow.left,
+            .player-container:-moz-full-screen .nav-arrow.left {
+                left: 15px;
+            }
+            
+            .player-container:fullscreen .nav-arrow.right,
+            .player-container:-webkit-full-screen .nav-arrow.right,
+            .player-container:-moz-full-screen .nav-arrow.right {
+                right: 15px;
             }
         }
 
@@ -569,6 +617,35 @@
         @media (min-width: 769px) {
             .navigation-arrows {
                 display: none !important;
+            }
+        }
+
+        /* iOS specific fixes */
+        .ios-device .player-container {
+            -webkit-transform: translateZ(0);
+            transform: translateZ(0);
+        }
+        
+        .ios-device video {
+            -webkit-playsinline: true;
+            playsinline: true;
+        }
+        
+        @media (max-width: 768px) {
+            /* iOS Safari fullscreen help text */
+            .ios-device .fullscreen-help {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0,0,0,0.8);
+                color: white;
+                padding: 1rem;
+                border-radius: 0.5rem;
+                text-align: center;
+                font-size: 0.9rem;
+                z-index: 1000;
+                display: none;
             }
         }
 
@@ -820,7 +897,18 @@
         function detectMobile() {
             isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
                       'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            
             console.log('Mobile detected:', isMobile);
+            console.log('iOS detected:', isIOS);
+            console.log('Safari detected:', isSafari);
+            
+            // Add iOS-specific styling
+            if (isIOS) {
+                document.body.classList.add('ios-device');
+            }
         }
 
         // Aggressive preload for next and previous videos
@@ -1064,6 +1152,8 @@
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
             const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
             
+            console.log('Entering fullscreen, iOS:', isIOS, 'Safari:', isSafari);
+            
             if (isIOS && isSafari) {
                 // iOS Safari - use webkit video fullscreen
                 if (mainVideo.webkitEnterFullscreen) {
@@ -1075,7 +1165,10 @@
                 // Standard browsers - use Fullscreen API
                 if (playerContainer.requestFullscreen) {
                     playerContainer.requestFullscreen().then(() => {
+                        console.log('Fullscreen entered successfully');
                         lockLandscapeOrientation();
+                    }).catch(err => {
+                        console.log('Fullscreen request failed:', err);
                     });
                 } else if (playerContainer.webkitRequestFullscreen) {
                     playerContainer.webkitRequestFullscreen();
@@ -1083,6 +1176,8 @@
                 } else if (playerContainer.msRequestFullscreen) {
                     playerContainer.msRequestFullscreen();
                     lockLandscapeOrientation();
+                } else {
+                    console.log('Fullscreen API not supported');
                 }
             }
         }
@@ -1115,25 +1210,40 @@
             console.log('Mobile device:', isMobile);
             console.log('SLIDE NAVIGATION MODE:', isFullscreen && isMobile ? 'ACTIVATED' : 'DEACTIVATED');
             
-            // Mobile fullscreen = slide navigation mode (CSS handles arrow visibility)
+            // Mobile fullscreen = slide navigation mode
             if (isFullscreen && isMobile) {
                 console.log('🎬 SLIDE NAVIGATION MODE ACTIVATED - Arrows should be visible!');
+                
                 // Force show arrows on mobile fullscreen
                 const navArrows = document.querySelector('.navigation-arrows');
                 if (navArrows) {
-                    navArrows.style.display = 'block';
+                    navArrows.style.display = 'block !important';
                     navArrows.style.opacity = '1';
                     navArrows.style.visibility = 'visible';
+                    navArrows.style.zIndex = '1000';
                     console.log('Navigation arrows forced visible');
+                }
+                
+                // Hide controls initially in mobile fullscreen
+                controlsContainer.classList.add('hidden');
+                controlsVisible = false;
+                
+                // Force landscape orientation if supported
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('landscape-primary').catch(err => {
+                        console.log('Orientation lock failed:', err);
+                    });
                 }
             } else {
                 console.log('Normal video mode');
-            }
-            
-            if (isFullscreen && isPlaying) {
-                controlsContainer.classList.add('hidden');
-                controlsVisible = false;
-            } else {
+                
+                // Hide arrows when not in mobile fullscreen
+                const navArrows = document.querySelector('.navigation-arrows');
+                if (navArrows) {
+                    navArrows.style.display = 'none';
+                }
+                
+                // Show controls normally
                 controlsContainer.classList.remove('hidden');
                 controlsVisible = true;
             }
@@ -1148,15 +1258,22 @@
                 const orientation = screen.orientation?.type || window.orientation;
                 const isLandscape = orientation?.includes('landscape') || Math.abs(window.orientation) === 90;
                 
-                // Only for non-iOS devices (iOS Safari handles fullscreen differently)
+                console.log('Orientation changed:', orientation, 'Landscape:', isLandscape, 'Fullscreen:', isFullscreen);
+                
+                // Check device type
                 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
                 const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
                 
-                if (isLandscape && !isFullscreen && isPlaying && !(isIOS && isSafari)) {
-                    // Auto-enter fullscreen when rotated to landscape
+                if (isLandscape && !isFullscreen) {
+                    // Auto-enter fullscreen when rotated to landscape, regardless of play state
+                    console.log('Auto-entering fullscreen due to landscape orientation');
                     enterFullscreen();
+                } else if (!isLandscape && isFullscreen && !(isIOS && isSafari)) {
+                    // Auto-exit fullscreen when rotated to portrait (except iOS Safari)
+                    console.log('Auto-exiting fullscreen due to portrait orientation');
+                    exitFullscreen();
                 }
-            }, 100);
+            }, 200);
         }
 
         // Show controls temporarily
@@ -1204,7 +1321,7 @@
             const deltaY = touchEndY - touchStartY;
             const swipeTime = touchEndTime - touchStartTime;
             const minSwipeDistance = 50;
-            const maxSwipeTime = 300;
+            const maxSwipeTime = 500;
 
             console.log('Touch end at:', touchEndX, touchEndY, 'Delta:', deltaX, deltaY, 'Time:', swipeTime);
 
@@ -1214,7 +1331,7 @@
             // MOBILE FULLSCREEN = SLIDE NAVIGATION MODE
             if (isFullscreen && isMobile) {
                 // SLIDE NAVIGATION: Horizontal swipe changes slides (like PowerPoint)
-                if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30 && swipeTime < 500) {
+                if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50 && swipeTime < 800) {
                     e.preventDefault();
                     e.stopPropagation();
                     console.log('📱 SLIDE SWIPE:', deltaX > 0 ? 'right (previous slide)' : 'left (next slide)');
@@ -1225,10 +1342,9 @@
                     }
                     return;
                 }
-                // Tap for play/pause (secondary)
-                else if (Math.abs(deltaX) < 30 && Math.abs(deltaY) < 30 && swipeTime < 200 && !isOnArrow) {
-                    console.log('📱 SLIDE TAP - play/pause');
-                    togglePlayPause();
+                // Tap to show controls temporarily
+                else if (Math.abs(deltaX) < 20 && Math.abs(deltaY) < 20 && swipeTime < 300 && !isOnArrow) {
+                    console.log('📱 SLIDE TAP - show controls temporarily');
                     showControlsTemporarily();
                     return;
                 }
@@ -1339,6 +1455,20 @@
                 videoContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
                 videoContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
                 
+                // Add double tap for fullscreen
+                let lastTouchTime = 0;
+                videoContainer.addEventListener('touchend', (e) => {
+                    const currentTime = new Date().getTime();
+                    const tapLength = currentTime - lastTouchTime;
+                    if (tapLength < 500 && tapLength > 0) {
+                        // Double tap detected
+                        e.preventDefault();
+                        console.log('Double tap detected - toggling fullscreen');
+                        toggleFullscreen();
+                    }
+                    lastTouchTime = currentTime;
+                });
+                
                 console.log('Touch events added successfully');
             }
         }
@@ -1369,8 +1499,17 @@
         // Orientation change events for mobile
         function addOrientationEvents() {
             if (isMobile) {
-                screen.orientation?.addEventListener('change', handleOrientationChange);
+                // Add orientation change listeners
+                if (screen.orientation) {
+                    screen.orientation.addEventListener('change', handleOrientationChange);
+                }
                 window.addEventListener('orientationchange', handleOrientationChange);
+                window.addEventListener('resize', handleOrientationChange);
+                
+                // Initial orientation check
+                setTimeout(handleOrientationChange, 500);
+                
+                console.log('Orientation events added for mobile');
             }
         }
 
