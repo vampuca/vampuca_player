@@ -417,14 +417,7 @@
                 left: auto;
             }
 
-            .timeline-container {
-                margin: 0 0.5rem;
-            }
 
-            .timeline-time {
-                font-size: 0.75rem;
-                min-width: 2.5rem;
-            }
 
             .volume-control {
                 gap: 0.25rem;
@@ -489,6 +482,81 @@
         .player-container:fullscreen .video-container {
             touch-action: manipulation;
         }
+
+        /* Credits slide styling */
+        .credits {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            z-index: 10;
+            padding: 2rem;
+            animation: fadeIn 2s ease-in-out;
+        }
+
+        .credits.visible {
+            display: flex;
+        }
+
+        .credits div {
+            max-width: 600px;
+            line-height: 1.8;
+        }
+
+        .credits p {
+            margin: 1rem 0;
+            font-size: 1.2rem;
+            opacity: 0;
+            animation: slideUp 1s ease-out forwards;
+        }
+
+        .credits p:nth-child(1) { animation-delay: 0.5s; font-size: 1.5rem; font-weight: bold; }
+        .credits p:nth-child(2) { animation-delay: 1s; }
+        .credits p:nth-child(3) { animation-delay: 1.5s; }
+        .credits p:nth-child(4) { animation-delay: 2s; }
+        .credits p:nth-child(5) { animation-delay: 2.5s; }
+        .credits p:nth-child(6) { animation-delay: 3s; font-size: 1rem; opacity: 0.8; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { 
+                opacity: 0; 
+                transform: translateY(30px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+
+        /* Mobile credits styling */
+        @media (max-width: 768px) {
+            .credits {
+                padding: 1rem;
+            }
+            
+            .credits p {
+                font-size: 1rem;
+            }
+            
+            .credits p:nth-child(1) {
+                font-size: 1.3rem;
+            }
+        }
+
+        
     </style>
 </head>
 <body>
@@ -516,7 +584,7 @@
 
         <!-- Slide Counter -->
         <div class="slide-counter">
-            <span id="slideCounter">1 / 21</span>
+            <span id="slideCounter">Title / 22</span>
         </div>
 
         <!-- Main Video Container -->
@@ -530,6 +598,8 @@
                     <div class="loading-text">Loading...</div>
                 </div>
             </div>
+
+
         </div>
 
         <!-- Controls -->
@@ -602,13 +672,13 @@
                 src: 'https://github.com/vampuca/vampuca_player/raw/main/KLKT_TITLE.m4v',
                 title: 'Title'
             },
-            ...Array.from({ length: 19 }, (_, i) => ({
+            ...Array.from({ length: 20 }, (_, i) => ({
                 id: i + 2,
                 src: `https://github.com/vampuca/vampuca_player/raw/main/KLKT_${i + 1}.m4v`,
                 title: `Chapter ${i + 1}`
             })),
             {
-                id: 21,
+                id: 22,
                 src: 'https://github.com/vampuca/vampuca_player/raw/main/KLKT_END.m4v',
                 title: 'End'
             }
@@ -758,9 +828,9 @@
         // Update slide counter
         function updateSlideCounter() {
             const displayText = currentSlide === 0 ? 'Title' : 
-                               currentSlide === 20 ? 'End' : 
+                               currentSlide === 21 ? 'End' :
                                `Chapter ${currentSlide}`;
-            slideCounter.textContent = `${displayText} / 21`;
+            slideCounter.textContent = `${displayText} / 22`;
         }
 
         // Update controls - hide buttons on first and last page
