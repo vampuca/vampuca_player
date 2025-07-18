@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vampuca AI Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: black;
+            color: white;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .player-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: black;
+        }
+
+        .studio-branding {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .studio-brand-block {
+            background: rgba(0,0,0,0.7);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,133,51,0.2);
+        }
+
+        .dropdown-button-container {
+            background: rgba(0,0,0,0.7);
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,133,51,0.2);
+            position: relative;
+            z-index: 1001;
+        }
+
+        .studio-name {
+            color: hsl(14,100%,60%);
+            font-weight: 700;
+            font-size: 1.125rem;
+            letter-spacing: 0.05em;
+            text-shadow: 0 0 10px rgba(255,133,51,0.3);
+        }
+
+        .dropdown-button {
+            background: none;
+            border: none;
+            color: hsl(14,100%,60%);
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            transition: all 0.2s ease;
+        }
+
+        .dropdown-button:hover {
+            color: white;
+            background: rgba(255,133,51,0.1);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            width: 12rem;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(16px);
+            border-radius: 0.5rem;
+            border: 1px solid rgba(0,0,0,0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            max-height: 60vh;
+            overflow-y: auto;
+            z-index: 1002;
+            display: none;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .dropdown-menu.visible {
+            display: block !important;
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+        }
+
+        .dropdown-menu::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .dropdown-menu::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+            border-radius: 3px;
+        }
+
+        .dropdown-menu::-webkit-scrollbar-thumb {
+            background: rgba(255,133,51,0.6);
+            border-radius: 3px;
+        }
+
+        .dropdown-menu::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,133,51,0.8);
+        }
+
+        .dropdown-header {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            color: hsl(14,100%,60%);
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .chapter-list {
+            padding: 0.5rem;
+        }
+
+        .chapter-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: none;
+            background: none;
+            color: #374151;
+            cursor: pointer;
+            border-radius: 0.375rem;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+            text-align: left;
+        }
+
+        @media (max-width: 768px) {
+            .chapter-item {
+                min-height: 48px;
+                padding: 1rem 1.25rem;
+                font-size: 1.1rem;
+            }
+        }
+
+        .chapter-item:hover {
+            background: rgba(255,133,51,0.1);
+            color: hsl(14,100%,60%);
+        }
+
+        .chapter-item.active {
+            background: rgba(255,133,51,0.2);
+            color: hsl(14,100%,60%);
+        }
+
+        .chapter-indicator {
+            opacity: 0.5;
+            font-size: 1.2em;
+            margin-left: auto;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .main-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .slide-counter {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            z-index: 50;
+            background: rgba(0,0,0,0.7);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            backdrop-filter: blur(12px);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .controls-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 50%, transparent 100%);
+            padding: 4rem 1rem 1rem;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .controls-container.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .controls-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .controls-left, .controls-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .control-btn {
+            background: rgba(0,0,0,0.7);
+            border: none;
+            color: white;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .control-btn:hover {
+            background: rgba(255,133,51,0.2);
+            border-color: rgba(255,133,51,0.3);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .control-btn svg {
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(0,0,0,0.7);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .volume-slider {
+            width: 80px;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: hsl(14,100%,60%);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: hsl(14,100%,60%);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .navigation-arrows {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            transform: translateY(-50%);
+            display: flex;
+            justify-content: space-between;
+            padding: 0 1rem;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .nav-arrow {
+            background: rgba(0,0,0,0.7);
+            border: none;
+            color: white;
+            padding: 1rem;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
+            pointer-events: auto;
+        }
+
+        .nav-arrow:hover {
+            background: rgba(255,133,51,0.2);
+            border-color: rgba(255,133,51,0.3);
+        }
+
+        .nav-arrow:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .nav-arrow svg {
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+
+        .loading-state {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            padding: 2rem;
+            border-radius: 1rem;
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 1000;
+            text-align: center;
+        }
+
+        .loading-state.hidden {
+            display: none;
+        }
+
+        .loading-spinner {
+            width: 2rem;
+            height: 2rem;
+            border: 3px solid rgba(255,255,255,0.2);
+            border-top: 3px solid hsl(14,100%,60%);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 0.875rem;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Mobile-specific styles */
+        @media (max-width: 768px) {
+            .main-video {
+                pointer-events: none !important;
+            }
+            
+            .player-container:fullscreen .main-video,
+            .player-container:-webkit-full-screen .main-video {
+                pointer-events: none !important;
+            }
+            
+            #mobileSwipeOverlay {
+                display: block !important;
+                pointer-events: auto !important;
+                touch-action: none !important;
+                position: absolute; 
+                top: 0; 
+                left: 0; 
+                width: 100%; 
+                height: 100%; 
+                z-index: 1500;
+                background: transparent;
+            }
+            
+            .mobile-fullscreen-arrows, 
+            .mobile-mute-btn { 
+                display: block !important; 
+            }
+        }
+
+        @media (min-width: 769px) {
+            .navigation-arrows {
+                display: none !important;
+            }
+        }
+
+        /* Mobile fullscreen controls */
+        .mobile-fullscreen-arrows {
+            position: fixed;
+            top: 50%;
+            left: 0;
+            right: 0;
+            transform: translateY(-50%);
+            display: none;
+            justify-content: space-between;
+            padding: 0 1rem;
+            z-index: 2000;
+            pointer-events: none;
+        }
+
+        .mobile-fullscreen-arrows .nav-arrow {
+            pointer-events: auto;
+        }
+
+        .mobile-mute-btn {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            background: rgba(0,0,0,0.7);
+            border: none;
+            color: white;
+            padding: 0.75rem;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 2001;
+            display: none;
+        }
+
+        .mobile-mute-btn svg {
+            width: 22px;
+            height: 22px;
+        }
+    </style>
+</head>
+<body>
+    <div class="player-container" id="playerContainer">
+        <!-- Studio Branding -->
+        <div class="studio-branding">
+            <div class="studio-brand-block">
+                <span class="studio-name">VAMPUCA AI</span>
+            </div>
+            <div class="dropdown-button-container">
+                <button class="dropdown-button" id="dropdownButton">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </button>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <div class="dropdown-header">Chapters</div>
+                    <div class="chapter-list" id="chapterList">
+                        <!-- Chapters will be generated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide Counter -->
+        <div class="slide-counter" id="slideCounter">Title / 22</div>
+
+        <!-- Video Container -->
+        <div class="video-container" id="videoContainer" style="position:relative;">
+            <video id="mainVideo" class="main-video" preload="none" playsinline webkit-playsinline muted></video>
+            <!-- Mobile swipe overlay (универсальный для всех свайпов) -->
+            <div id="mobileSwipeOverlay" aria-hidden="true"></div>
+            <!-- Loading State -->
+            <div class="loading-state" id="loadingState">
+                <div class="loading-spinner"></div>
+                <div class="loading-text" id="loadingText">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Navigation Arrows (Desktop) -->
+        <div class="navigation-arrows">
+            <button class="nav-arrow" id="prevBtn" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+            </button>
+            <button class="nav-arrow" id="nextBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18l6-6-6-6"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Mobile Fullscreen Arrows -->
+        <div class="mobile-fullscreen-arrows">
+            <button class="nav-arrow" id="mobilePrevArrow" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+            </button>
+            <button class="nav-arrow" id="mobileNextArrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18l6-6-6-6"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Mobile Mute Button -->
+        <button class="mobile-mute-btn" id="mobileMuteBtn">
+            <svg id="mobileMuteIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+            <svg id="mobileMutedIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                <line x1="23" y1="9" x2="17" y2="15"/>
+                <line x1="17" y1="9" x2="23" y2="15"/>
+            </svg>
+        </button>
+
+        <!-- Controls -->
+        <div class="controls-container" id="controlsContainer">
+            <div class="controls-row">
+                <div class="controls-left">
+                    <button class="control-btn" id="playBtn">
+                        <svg id="playIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="5,3 19,12 5,21"/>
+                        </svg>
+                        <svg id="pauseIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hidden">
+                            <rect x="6" y="4" width="4" height="16"/>
+                            <rect x="14" y="4" width="4" height="16"/>
+                        </svg>
+                    </button>
+                    <div class="volume-control">
+                        <button class="control-btn" id="muteBtn">
+                            <svg id="muteIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                            </svg>
+                            <svg id="mutedIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hidden">
+                                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                                <line x1="23" y1="9" x2="17" y2="15"/>
+                                <line x1="17" y1="9" x2="23" y2="15"/>
+                            </svg>
+                        </button>
+                        <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="100">
+                    </div>
+                </div>
+                <div class="controls-right">
+                    <button class="control-btn" id="fullscreenBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15,3 21,3 21,9"/>
+                            <polyline points="9,21 3,21 3,15"/>
+                            <line x1="21" y1="3" x2="14" y2="10"/>
+                            <line x1="3" y1="21" x2="10" y2="14"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <script>
+        // --- Video Sources ---
+        const videoSources = [
+            { src: 'KLKT_TITLE.m4v', title: 'Title' },
+            { src: 'KLKT_1.m4v', title: 'Chapter 1' },
+            { src: 'KLKT_2.m4v', title: 'Chapter 2' },
+            { src: 'KLKT_3.m4v', title: 'Chapter 3' },
+            { src: 'KLKT_4.m4v', title: 'Chapter 4' },
+            { src: 'KLKT_5.m4v', title: 'Chapter 5' },
+            { src: 'KLKT_6.m4v', title: 'Chapter 6' },
+            { src: 'KLKT_7.m4v', title: 'Chapter 7' },
+            { src: 'KLKT_8.m4v', title: 'Chapter 8' },
+            { src: 'KLKT_9.m4v', title: 'Chapter 9' },
+            { src: 'KLKT_10.m4v', title: 'Chapter 10' },
+            { src: 'KLKT_11.m4v', title: 'Chapter 11' },
+            { src: 'KLKT_12.m4v', title: 'Chapter 12' },
+            { src: 'KLKT_13.m4v', title: 'Chapter 13' },
+            { src: 'KLKT_14.m4v', title: 'Chapter 14' },
+            { src: 'KLKT_15.m4v', title: 'Chapter 15' },
+            { src: 'KLKT_16.m4v', title: 'Chapter 16' },
+            { src: 'KLKT_17.m4v', title: 'Chapter 17' },
+            { src: 'KLKT_18.m4v', title: 'Chapter 18' },
+            { src: 'KLKT_19.m4v', title: 'Chapter 19' },
+            { src: 'KLKT_20.m4v', title: 'Chapter 20' },
+            { src: 'KLKT_END.m4v', title: 'End' }
+        ];
+
+        // --- DOM Elements ---
+        const playerContainer = document.getElementById('playerContainer');
+        const mainVideo = document.getElementById('mainVideo');
+        const videoContainer = document.getElementById('videoContainer');
+        const loadingState = document.getElementById('loadingState');
+        const loadingText = document.getElementById('loadingText');
+        const slideCounter = document.getElementById('slideCounter');
+        const controlsContainer = document.getElementById('controlsContainer');
+        const playBtn = document.getElementById('playBtn');
+        const muteBtn = document.getElementById('muteBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const dropdownButton = document.getElementById('dropdownButton');
+        const dropdownMenu = document.getElementById('dropdownMenu');
+        const chapterList = document.getElementById('chapterList');
+        const playIcon = document.getElementById('playIcon');
+        const pauseIcon = document.getElementById('pauseIcon');
+        const muteIcon = document.getElementById('muteIcon');
+        const mutedIcon = document.getElementById('mutedIcon');
+        const overlay = document.getElementById('mobileSwipeOverlay');
+        const mobilePrevArrow = document.getElementById('mobilePrevArrow');
+        const mobileNextArrow = document.getElementById('mobileNextArrow');
+
+        // --- State ---
+        let currentSlide = 0;
+        let isPlaying = false;
+        let isMuted = false; // Sound ON by default
+        let showDropdown = false;
+        let controlsTimeout;
+        let currentBlobURL = null; // Для хранения текущего Blob URL
+
+        // --- Touch handling state ---
+        let touchStart = { x: 0, y: 0 };
+        let touchEnd = { x: 0, y: 0 };
+
+        // --- Mobile Detection ---
+        function isReallyMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                   (typeof window.orientation !== 'undefined') || 
+                   window.innerWidth <= 800;
+        }
+
+        // --- Simple touch handling ---
+        function handleTouchStart(e) {
+            if (!isReallyMobile()) return;
+            touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            console.log('Touch start:', touchStart);
+            e.preventDefault();
+        }
+
+        function handleTouchMove(e) {
+            if (!isReallyMobile()) return;
+            e.preventDefault();
+        }
+
+        async function handleTouchEnd(e) {
+            if (!isReallyMobile()) return;
+            touchEnd = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+            const deltaX = touchEnd.x - touchStart.x;
+            console.log('Touch end, deltaX:', deltaX);
+
+            if (Math.abs(deltaX) > 50) {
+                if (deltaX > 0) {
+                    console.log('Swipe right detected via touch');
+                    await goToPrevious();
+                } else {
+                    console.log('Swipe left detected via touch');
+                    await goToNext();
+                }
+            }
+            e.preventDefault();
+        }
+
+        // --- Overlay and Hammer.js swipe logic ---
+        function enableMobileSwipe() {
+            console.log('enableMobileSwipe called, isReallyMobile:', isReallyMobile());
+
+            if (!isReallyMobile()) {
+                console.log('Desktop detected - disabling overlays and touch handlers');
+                overlay.style.display = 'none';
+                overlay.style.pointerEvents = 'none';
+
+                // Remove touch handlers
+                videoContainer.removeEventListener('touchstart', handleTouchStart);
+                videoContainer.removeEventListener('touchmove', handleTouchMove);
+                videoContainer.removeEventListener('touchend', handleTouchEnd);
+
+                // Remove Hammer.js handlers if any
+                if (overlay._hammer) {
+                    overlay._hammer.destroy();
+                    overlay._hammer = null;
+                }
+                return;
+            }
+
+            console.log('Mobile detected - enabling touch handlers and overlays');
+
+            // Add touch handlers to video container
+            videoContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+            videoContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+            videoContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+            // Mobile overlay
+            overlay.style.display = 'block';
+            overlay.style.pointerEvents = 'auto';
+            overlay.style.background = 'transparent';
+            overlay.style.zIndex = 1000;
+
+            // Setup Hammer.js for overlay
+            if (!overlay._hammer) {
+                console.log('Setting up Hammer.js for regular overlay');
+                var hammer = new Hammer(overlay);
+                overlay._hammer = hammer;
+                hammer.on('swipeleft', async function() {
+                    console.log('Swipe left detected on regular overlay');
+                    await goToNext();
+                });
+                hammer.on('swiperight', async function() {
+                    console.log('Swipe right detected on regular overlay');
+                    await goToPrevious();
+                });
+            }
+
+            // Prevent long-press download/save on video
+            mainVideo.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                return false;
+            });
+        }
+
+        // Update overlay state on resize/orientation change
+        window.addEventListener('resize', enableMobileSwipe);
+        window.addEventListener('orientationchange', enableMobileSwipe);
+
+        // Fullscreen change handlers
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+        function handleFullscreenChange() {
+            console.log('Fullscreen change detected');
+            const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+            console.log('Is fullscreen:', isFullscreen);
+
+            if (isReallyMobile()) {
+                if (isFullscreen) {
+                    console.log('Mobile fullscreen entered - enabling fullscreen overlay');
+                } else {
+                    console.log('Mobile fullscreen exited - enabling regular overlay');
+                }
+            }
+        }
+
+        // --- Load video via Blob URL to "hide" from browser ---
+        async function loadVideoBlob(src) {
+            // Показываем спиннер
+            loadingState.classList.remove('hidden');
+            loadingText.textContent = `Loading video...`;
+
+            try {
+                // Запрашиваем файл
+                const resp = await fetch(src);
+                if (!resp.ok) {
+                    throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+                }
+                const data = await resp.arrayBuffer();
+
+                // Создаём Blob «безвидеового» типа
+                const blob = new Blob([data], { type: 'application/octet-stream' });
+
+                // Освобождаем старый URL, если есть
+                if (currentBlobURL) {
+                    URL.revokeObjectURL(currentBlobURL);
+                }
+
+                // Генерируем URL и ставим в видео
+                const url = URL.createObjectURL(blob);
+                currentBlobURL = url;
+                mainVideo.src = url;
+                mainVideo.load();
+                mainVideo.currentTime = 0;
+                mainVideo.muted = isMuted;
+
+                // Ждём первого кадра
+                return new Promise((resolve) => {
+                    mainVideo.addEventListener('loadeddata', function onLoaded() {
+                        mainVideo.removeEventListener('loadeddata', onLoaded);
+                        loadingState.classList.add('hidden');
+                        resolve();
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading video via Blob:', error);
+                loadingState.classList.add('hidden');
+                throw error;
+            }
+        }
+
+        // --- Load video and always show first frame ---
+        async function loadVideo(index, autoplay = false) {
+            if (index < 0 || index >= videoSources.length) return;
+            currentSlide = index;
+            isPlaying = false;
+            mainVideo.pause();
+
+            // Загружаем видео через Blob URL
+            const videoSrc = videoSources[index].src;
+            try {
+                await loadVideoBlob(videoSrc);
+                if (autoplay) {
+                    mainVideo.play().catch(()=>{});
+                    isPlaying = true;
+                    updatePlayButton();
+                }
+            } catch (error) {
+                console.error('Failed to load video:', error);
+                // Fallback к обычной загрузке в случае ошибки
+                mainVideo.src = videoSrc;
+                mainVideo.load();
+                mainVideo.currentTime = 0;
+                mainVideo.muted = isMuted;
+            }
+
+            updateSlideCounter();
+            updateChapterList();
+            updateControls();
+        }
+
+        // --- Controls logic ---
+        function updatePlayButton() {
+            if (isPlaying) {
+                playIcon.classList.add('hidden');
+                pauseIcon.classList.remove('hidden');
+            } else {
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+            }
+        }
+
+        function updateMuteButton() {
+            if (isMuted) {
+                muteIcon.classList.add('hidden');
+                mutedIcon.classList.remove('hidden');
+            } else {
+                muteIcon.classList.remove('hidden');
+                mutedIcon.classList.add('hidden');
+            }
+        }
+
+        function updateSlideCounter() {
+            let displayText;
+            if (currentSlide === 0) {
+                displayText = 'Title';
+            } else if (currentSlide === videoSources.length - 1) {
+                displayText = 'End';
+            } else {
+                displayText = `Chapter ${currentSlide}`;
+            }
+            slideCounter.textContent = `${displayText} / ${videoSources.length}`;
+        }
+
+        function updateChapterList() {
+            const items = chapterList.querySelectorAll('.chapter-item');
+            items.forEach((item, index) => {
+                if (index === currentSlide) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+
+        function updateControls() {
+            prevBtn.style.display = currentSlide === 0 ? 'none' : 'flex';
+            playBtn.style.display = currentSlide === 0 ? 'none' : 'flex';
+            nextBtn.style.display = currentSlide === videoSources.length - 1 ? 'none' : 'flex';
+
+            // Update mobile fullscreen arrows
+            if (mobilePrevArrow) {
+                mobilePrevArrow.disabled = currentSlide === 0;
+            }
+            if (mobileNextArrow) {
+                mobileNextArrow.disabled = currentSlide === videoSources.length - 1;
+            }
+        }
+
+        // --- Generate chapter list ---
+        function generateChapterList() {
+            chapterList.innerHTML = '';
+            videoSources.forEach((video, index) => {
+                const button = document.createElement('button');
+                button.className = 'chapter-item';
+                button.innerHTML = `
+                    <span>${video.title}</span>
+                    <span class="chapter-indicator">›</span>
+                `;
+                button.addEventListener('click', async () => {
+                    await loadVideo(index, true);
+                    toggleDropdown();
+                });
+                chapterList.appendChild(button);
+            });
+        }
+
+        // --- Navigation logic ---
+        async function goToPrevious() {
+            if (currentSlide > 0) {
+                await loadVideo(currentSlide - 1, true);
+            }
+        }
+
+        async function goToNext() {
+            if (currentSlide < videoSources.length - 1) {
+                await loadVideo(currentSlide + 1, true);
+            }
+        }
+
+        // --- Play/pause/mute handlers ---
+        playBtn.addEventListener('click', function() {
+            if (isPlaying) {
+                mainVideo.pause();
+                isPlaying = false;
+            } else {
+                // Unmute on user interaction
+                if (isMuted) {
+                    isMuted = false;
+                    mainVideo.muted = false;
+                    updateMuteButton();
+                }
+                mainVideo.play().catch(()=>{});
+                isPlaying = true;
+            }
+            updatePlayButton();
+        });
+
+        muteBtn.addEventListener('click', function() {
+            isMuted = !isMuted;
+            mainVideo.muted = isMuted;
+            updateMuteButton();
+        });
+
+        volumeSlider.addEventListener('input', function(e) {
+            const v = e.target.value / 100;
+            mainVideo.volume = v;
+            isMuted = v === 0;
+            mainVideo.muted = isMuted;
+            updateMuteButton();
+        });
+
+        // --- Fullscreen logic ---
+        function enterFullscreen() {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            if (isIOS && isSafari) {
+                // iOS Safari: only video can go fullscreen
+                if (mainVideo.webkitEnterFullscreen) {
+                    console.log('iOS Safari: using webkitEnterFullscreen on video');
+                    mainVideo.webkitEnterFullscreen();
+                } else {
+                    console.log('iOS Safari: webkitEnterFullscreen not available');
+                }
+            } else {
+                // Other browsers: use Fullscreen API on container
+                if (playerContainer.requestFullscreen) {
+                    console.log('Requesting fullscreen on playerContainer');
+                    playerContainer.requestFullscreen();
+                } else if (playerContainer.webkitRequestFullscreen) {
+                    playerContainer.webkitRequestFullscreen();
+                } else if (playerContainer.msRequestFullscreen) {
+                    playerContainer.msRequestFullscreen();
+                } else {
+                    console.log('Fullscreen API not available');
+                }
+            }
+        }
+
+        // Attach fullscreen button to new logic
+        fullscreenBtn.addEventListener('click', enterFullscreen);
+
+        // --- Dropdown logic ---
+        dropdownButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown();
+            // On mobile, hide overlay when dropdown is open, show when closed
+            if (isReallyMobile()) {
+                if (showDropdown) {
+                    overlay.style.display = 'none';
+                    overlay.style.pointerEvents = 'none';
+                } else {
+                    overlay.style.display = 'block';
+                    overlay.style.pointerEvents = 'auto';
+                }
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.dropdown-button-container') && showDropdown) {
+                toggleDropdown();
+                // On mobile, show overlay again when dropdown closes
+                if (isReallyMobile()) {
+                    overlay.style.display = 'block';
+                    overlay.style.pointerEvents = 'auto';
+                }
+            }
+        });
+
+        // --- Controls auto-hide on desktop ---
+        function showControlsTemporarily() {
+            controlsContainer.classList.remove('hidden');
+            console.log('Controls shown');
+            clearTimeout(controlsTimeout);
+            controlsTimeout = setTimeout(() => {
+                controlsContainer.classList.add('hidden');
+                console.log('Controls hidden');
+            }, 1500);
+        }
+
+        document.addEventListener('mousemove', showControlsTemporarily);
+        document.addEventListener('touchstart', showControlsTemporarily);
+        videoContainer.addEventListener('click', showControlsTemporarily);
+
+        // --- Arrow button handlers ---
+        prevBtn.addEventListener('click', async function(e) {
+            console.log('Prev arrow clicked');
+            await goToPrevious();
+        });
+
+        nextBtn.addEventListener('click', async function(e) {
+            console.log('Next arrow clicked');
+            await goToNext();
+        });
+
+        // --- Mobile fullscreen arrow handlers ---
+        mobilePrevArrow.addEventListener('click', async function(e) {
+            console.log('Mobile prev arrow clicked');
+            e.stopPropagation();
+            await goToPrevious();
+        });
+
+        mobileNextArrow.addEventListener('click', async function(e) {
+            console.log('Mobile next arrow clicked');
+            e.stopPropagation();
+            await goToNext();
+        });
+
+        // --- Keyboard navigation ---
+        document.addEventListener('keydown', async function(e) {
+            if (e.key === ' ' || e.key === 'Spacebar') {
+                playBtn.click();
+                e.preventDefault();
+            } else if (e.key === 'ArrowLeft') {
+                await goToPrevious();
+            } else if (e.key === 'ArrowRight') {
+                await goToNext();
+            } else if (e.key === 'f') {
+                fullscreenBtn.click();
+            } else if (e.key === 'm') {
+                muteBtn.click();
+            }
+        });
+
+        // --- Dropdown toggle logic ---
+        function toggleDropdown() {
+            if (!dropdownMenu) {
+                return;
+            }
+            showDropdown = !showDropdown;
+            if (showDropdown) {
+                dropdownMenu.classList.add('visible');
+            } else {
+                dropdownMenu.classList.remove('visible');
+            }
+        }
+
+        // --- Initialization ---
+        async function initialize() {
+            enableMobileSwipe();
+            generateChapterList();
+            await loadVideo(0); // Always start with Title slide
+            showControlsTemporarily();
+        }
+
+        document.addEventListener('DOMContentLoaded', initialize);
+
+        // --- Мобильные свайпы и fullscreen ---
+        (function(){
+            const overlay = document.getElementById('mobileSwipeOverlay');
+            const mainVideo = document.getElementById('mainVideo');
+            const playerContainer = document.getElementById('playerContainer');
+            const mobilePrevArrow = document.getElementById('mobilePrevArrow');
+            const mobileNextArrow = document.getElementById('mobileNextArrow');
+            const mobileMuteBtn = document.getElementById('mobileMuteBtn');
+            const mobileMuteIcon = document.getElementById('mobileMuteIcon');
+            const mobileMutedIcon = document.getElementById('mobileMutedIcon');
+            let isMuted = false;
+            let touchStart = {x:0, y:0};
+            let touchEnd = {x:0, y:0};
+
+            function isReallyMobile() {
+                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (typeof window.orientation !== 'undefined') || window.innerWidth <= 800;
+            }
+
+            function handleTouchStart(e) {
+                if (!isReallyMobile()) return;
+                if (!e.touches || e.touches.length > 1) return;
+                touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                e.preventDefault(); e.stopPropagation();
+                console.log('[DEBUG] handleTouchStart', touchStart);
+            }
+
+            function handleTouchMove(e) {
+                if (!isReallyMobile()) return;
+                e.preventDefault(); e.stopPropagation();
+            }
+
+            function handleTouchEnd(e) {
+                if (!isReallyMobile()) return;
+                if (!e.changedTouches || e.changedTouches.length > 1) return;
+                touchEnd = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+                const deltaX = touchEnd.x - touchStart.x;
+                const deltaY = Math.abs(touchEnd.y - touchStart.y);
+                if (Math.abs(deltaX) > 50 && deltaY < 100) {
+                    if (deltaX > 0) {
+                        if (mobilePrevArrow) mobilePrevArrow.click();
+                    } else {
+                        if (mobileNextArrow) mobileNextArrow.click();
+                    }
+                }
+                e.preventDefault(); e.stopPropagation();
+                console.log('[DEBUG] handleTouchEnd', {touchEnd, deltaX, deltaY});
+            }
+
+            function updateMobileMuteBtn() {
+                if (!mobileMuteIcon || !mobileMutedIcon) return;
+                if (isMuted) {
+                    mobileMuteIcon.style.display = 'none';
+                    mobileMutedIcon.style.display = '';
+                } else {
+                    mobileMuteIcon.style.display = '';
+                    mobileMutedIcon.style.display = 'none';
+                }
+            }
+
+            if (overlay) {
+                overlay.ontouchstart = handleTouchStart;
+                overlay.ontouchmove = handleTouchMove;
+                overlay.ontouchend = handleTouchEnd;
+                console.log('[DEBUG] overlay event handlers attached');
+            }
+
+            if (mobileMuteBtn) mobileMuteBtn.onclick = function(e) {
+                e.stopPropagation();
+                isMuted = !isMuted;
+                if (mainVideo) mainVideo.muted = isMuted;
+                updateMobileMuteBtn();
+                console.log('[DEBUG] mobileMuteBtn click, isMuted:', isMuted);
+            };
+
+            window.addEventListener('orientationchange', function() {
+                if (!isReallyMobile()) return;
+                if (window.orientation === 90 || window.orientation === -90) {
+                    if (!(document.fullscreenElement || document.webkitFullscreenElement)) {
+                        if (mainVideo.webkitEnterFullscreen) {
+                            mainVideo.webkitEnterFullscreen();
+                            console.log('[DEBUG] iOS Safari: webkitEnterFullscreen triggered');
+                        } else if (playerContainer.requestFullscreen) {
+                            playerContainer.requestFullscreen();
+                            console.log('[DEBUG] Fullscreen API triggered');
+                        } else if (playerContainer.webkitRequestFullscreen) {
+                            playerContainer.webkitRequestFullscreen();
+                            console.log('[DEBUG] webkitRequestFullscreen triggered');
+                        }
+                    }
+                }
+            });
+        })();
+    </script>
+</body>
+</html> 

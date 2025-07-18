@@ -942,7 +942,7 @@
         e.preventDefault();
     }
     
-    function handleTouchEnd(e) {
+    async function handleTouchEnd(e) {
         if (!isReallyMobile()) return;
         touchEnd = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
         const deltaX = touchEnd.x - touchStart.x;
@@ -951,10 +951,10 @@
         if (Math.abs(deltaX) > 50) {
             if (deltaX > 0) {
                 console.log('Swipe right detected via touch');
-                goToPrevious();
+                await goToPrevious();
             } else {
                 console.log('Swipe left detected via touch');
-                goToNext();
+                await goToNext();
             }
         }
         e.preventDefault();
@@ -1000,13 +1000,13 @@
             console.log('Setting up Hammer.js for regular overlay');
             var hammer = new Hammer(overlay);
             overlay._hammer = hammer;
-            hammer.on('swipeleft', function() { 
+            hammer.on('swipeleft', async function() { 
                 console.log('Swipe left detected on regular overlay');
-                goToNext(); 
+                await goToNext(); 
             });
-            hammer.on('swiperight', function() { 
+            hammer.on('swiperight', async function() { 
                 console.log('Swipe right detected on regular overlay');
-                goToPrevious(); 
+                await goToPrevious(); 
             });
         }
         
@@ -1046,8 +1046,12 @@
         }
     }
     
-    // --- Load video via Blob URL to "hide" from browser (только для мобильных) ---
+    // --- Load video via Blob URL to "hide" from browser ---
     async function loadVideoBlob(src) {
+        // Показываем спиннер
+        loadingState.classList.remove('hidden');
+        loadingText.textContent = `Loading video...`;
+        
         try {
             // Запрашиваем файл
             const resp = await fetch(src);
@@ -1082,6 +1086,7 @@
             });
         } catch (error) {
             console.error('Error loading video via Blob:', error);
+            loadingState.classList.add('hidden');
             throw error;
         }
     }
@@ -1091,56 +1096,24 @@
         if (index < 0 || index >= videoSources.length) return;
         currentSlide = index;
         isPlaying = false;
-        loadingState.classList.remove('hidden');
-        const chapterTitle = videoSources[index].title;
-        loadingText.textContent = `Loading ${chapterTitle}...`;
         mainVideo.pause();
         
+        // Загружаем видео через Blob URL
         const videoSrc = videoSources[index].src;
-        
-        // Используем Blob URL только на мобильных устройствах
-        if (isReallyMobile()) {
-            try {
-                await loadVideoBlob(videoSrc);
-                if (autoplay) {
-                    mainVideo.play().catch(()=>{});
-                    isPlaying = true;
-                    updatePlayButton();
-                }
-            } catch (error) {
-                console.error('Failed to load video via Blob, falling back to normal:', error);
-                // Fallback к обычной загрузке в случае ошибки
-                mainVideo.src = videoSrc;
-                mainVideo.load();
-                mainVideo.currentTime = 0;
-                mainVideo.muted = isMuted;
-                mainVideo.addEventListener('loadeddata', function onLoaded() {
-                    mainVideo.removeEventListener('loadeddata', onLoaded);
-                    loadingState.classList.add('hidden');
-                    if (autoplay) {
-                        mainVideo.play().catch(()=>{});
-                        isPlaying = true;
-                        updatePlayButton();
-                    }
-                });
+        try {
+            await loadVideoBlob(videoSrc);
+            if (autoplay) {
+                mainVideo.play().catch(()=>{});
+                isPlaying = true;
+                updatePlayButton();
             }
-        } else {
-            // На десктопе используем обычную загрузку
-            if (mainVideo.src !== videoSrc) {
-                mainVideo.src = videoSrc;
-                mainVideo.load();
-            }
+        } catch (error) {
+            console.error('Failed to load video:', error);
+            // Fallback к обычной загрузке в случае ошибки
+            mainVideo.src = videoSrc;
+            mainVideo.load();
             mainVideo.currentTime = 0;
             mainVideo.muted = isMuted;
-            mainVideo.addEventListener('loadeddata', function onLoaded() {
-                mainVideo.removeEventListener('loadeddata', onLoaded);
-                loadingState.classList.add('hidden');
-                if (autoplay) {
-                    mainVideo.play().catch(()=>{});
-                    isPlaying = true;
-                    updatePlayButton();
-                }
-            });
         }
         
         updateSlideCounter();
@@ -1210,22 +1183,22 @@
                 <span>${video.title}</span>
                 <span class="chapter-indicator">›</span>
             `;
-            button.addEventListener('click', () => {
-                loadVideo(index, true);
+            button.addEventListener('click', async () => {
+                await loadVideo(index, true);
                 toggleDropdown();
             });
             chapterList.appendChild(button);
         });
     }
     // --- Navigation logic ---
-    function goToPrevious() {
+    async function goToPrevious() {
         if (currentSlide > 0) {
-            loadVideo(currentSlide - 1, true);
+            await loadVideo(currentSlide - 1, true);
         }
     }
-    function goToNext() {
+    async function goToNext() {
         if (currentSlide < videoSources.length - 1) {
-            loadVideo(currentSlide + 1, true);
+            await loadVideo(currentSlide + 1, true);
         }
     }
     // --- Play/pause/mute handlers ---
@@ -1326,35 +1299,35 @@
     document.addEventListener('touchstart', showControlsTemporarily);
     videoContainer.addEventListener('click', showControlsTemporarily);
     // --- Arrow button handlers ---
-    prevBtn.addEventListener('click', function(e) {
+    prevBtn.addEventListener('click', async function(e) {
         console.log('Prev arrow clicked');
-        goToPrevious();
+        await goToPrevious();
     });
-    nextBtn.addEventListener('click', function(e) {
+    nextBtn.addEventListener('click', async function(e) {
         console.log('Next arrow clicked');
-        goToNext();
+        await goToNext();
     });
     
     // --- Mobile fullscreen arrow handlers ---
-    mobilePrevArrow.addEventListener('click', function(e) {
+    mobilePrevArrow.addEventListener('click', async function(e) {
         console.log('Mobile prev arrow clicked');
         e.stopPropagation();
-        goToPrevious();
+        await goToPrevious();
     });
-    mobileNextArrow.addEventListener('click', function(e) {
+    mobileNextArrow.addEventListener('click', async function(e) {
         console.log('Mobile next arrow clicked');
         e.stopPropagation();
-        goToNext();
+        await goToNext();
     });
     // --- Keyboard navigation ---
-    document.addEventListener('keydown', function(e) {
+    document.addEventListener('keydown', async function(e) {
         if (e.key === ' ' || e.key === 'Spacebar') {
             playBtn.click();
             e.preventDefault();
         } else if (e.key === 'ArrowLeft') {
-            goToPrevious();
+            await goToPrevious();
         } else if (e.key === 'ArrowRight') {
-            goToNext();
+            await goToNext();
         } else if (e.key === 'f') {
             fullscreenBtn.click();
         } else if (e.key === 'm') {
@@ -1374,10 +1347,10 @@
         }
     }
     // --- Initialization ---
-    function initialize() {
+    async function initialize() {
         enableMobileSwipe();
         generateChapterList();
-        loadVideo(0); // Always start with Title slide
+        await loadVideo(0); // Always start with Title slide
         showControlsTemporarily();
     }
     document.addEventListener('DOMContentLoaded', initialize);
