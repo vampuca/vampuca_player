@@ -728,8 +728,14 @@
         }
     }
 
-    /* Overlay всегда поверх видео на мобильных и в fullscreen, pointer-events: auto только на overlay */
     @media (max-width: 768px) {
+      .main-video {
+        pointer-events: none !important;
+      }
+      .player-container:fullscreen .main-video,
+      .player-container:-webkit-full-screen .main-video {
+        pointer-events: none !important;
+      }
       #mobileSwipeOverlay {
         display: block !important;
         pointer-events: auto !important;
@@ -737,16 +743,7 @@
         position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1500;
         background: transparent;
       }
-      .player-container:fullscreen #mobileSwipeOverlay,
-      .player-container:-webkit-full-screen #mobileSwipeOverlay,
-      .player-container:-moz-full-screen #mobileSwipeOverlay {
-        display: block !important;
-        pointer-events: auto !important;
-        z-index: 2001;
-      }
-      .main-video {
-        pointer-events: none !important;
-      }
+      .mobile-fullscreen-arrows, .mobile-mute-btn { display: block !important; }
     }
     @media (min-width: 769px) {
       #mobileSwipeOverlay, .mobile-fullscreen-arrows, .mobile-mute-btn { display: none !important; }
@@ -773,33 +770,6 @@
       display: flex; align-items: center; justify-content: center; pointer-events: auto;
     }
     .mobile-mute-btn svg { width: 22px; height: 22px; }
-    /* Показывать боковые стрелки только на мобильных и в мобильном fullscreen, скрывать на десктопе */
-    @media (min-width: 769px) {
-      .navigation-arrows,
-      .mobile-fullscreen-arrows {
-        display: none !important;
-      }
-    }
-    @media (max-width: 768px) {
-      /* В обычном мобильном режиме показывать только .navigation-arrows */
-      .navigation-arrows {
-        display: flex !important;
-      }
-      .mobile-fullscreen-arrows {
-        display: none !important;
-      }
-      /* В мобильном fullscreen показывать только .mobile-fullscreen-arrows, а .navigation-arrows скрывать */
-      .player-container:fullscreen .navigation-arrows,
-      .player-container:-webkit-full-screen .navigation-arrows,
-      .player-container:-moz-full-screen .navigation-arrows {
-        display: none !important;
-      }
-      .player-container:fullscreen .mobile-fullscreen-arrows,
-      .player-container:-webkit-full-screen .mobile-fullscreen-arrows,
-      .player-container:-moz-full-screen .mobile-fullscreen-arrows {
-        display: block !important;
-      }
-    }
 </style>
 </head> <body> <div class="player-container" id="playerContainer"> <!-- Studio Branding --> <div class="studio-branding"> <div class="studio-brand-block"> <span class="studio-name">VAMPUCA AI</span> </div> <div class="dropdown-button-container"> <button class="dropdown-button" id="dropdownButton"> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <path d="M6 9l6 6 6-6"/> </svg> </button>
             <div id="dropdownMenu" class="dropdown-menu">
@@ -999,9 +969,9 @@
             overlay.style.pointerEvents = 'none';
             
             // Remove touch handlers
-            overlay.removeEventListener('touchstart', handleTouchStart);
-            overlay.removeEventListener('touchmove', handleTouchMove);
-            overlay.removeEventListener('touchend', handleTouchEnd);
+            videoContainer.removeEventListener('touchstart', handleTouchStart);
+            videoContainer.removeEventListener('touchmove', handleTouchMove);
+            videoContainer.removeEventListener('touchend', handleTouchEnd);
             
             // Remove Hammer.js handlers if any
             if (overlay._hammer) {
@@ -1013,28 +983,28 @@
         
         console.log('Mobile detected - enabling touch handlers and overlays');
         
-        // Add touch handlers to overlay (like in indexbase44.html)
-        overlay.addEventListener('touchstart', handleTouchStart, { passive: false });
-        overlay.addEventListener('touchmove', handleTouchMove, { passive: false });
-        overlay.addEventListener('touchend', handleTouchEnd, { passive: false });
+        // Add touch handlers to video container (like in indexbase44.html)
+        videoContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+        videoContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+        videoContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
         
         // Mobile overlay
         overlay.style.display = 'block';
         overlay.style.pointerEvents = 'auto';
         overlay.style.background = 'transparent';
-        overlay.style.zIndex = 1500;
+        overlay.style.zIndex = 1000;
         
         // Setup Hammer.js for overlay
         if (!overlay._hammer) {
-            console.log('Setting up Hammer.js for overlay');
+            console.log('Setting up Hammer.js for regular overlay');
             var hammer = new Hammer(overlay);
             overlay._hammer = hammer;
             hammer.on('swipeleft', function() { 
-                console.log('Swipe left detected on overlay');
+                console.log('Swipe left detected on regular overlay');
                 goToNext(); 
             });
             hammer.on('swiperight', function() { 
-                console.log('Swipe right detected on overlay');
+                console.log('Swipe right detected on regular overlay');
                 goToPrevious(); 
             });
         }

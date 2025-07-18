@@ -1,0 +1,831 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { VideoSlide } from '@/entities/VideoSlide';
+
+export default function SlidePlayer() {
+  const [slides, setSlides] = useState([]);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadingText, setLoadingText] = useState('Loading...');
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  
+  const playerContainerRef = useRef(null);
+  const videoRef = useRef(null);
+  const controlsTimeoutRef = useRef(null);
+  
+  // Touch handling state
+  const touchStartRef = useRef({ x: 0, y: 0 });
+  const touchEndRef = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    loadSlides();
+  }, []);
+
+  useEffect(() => {
+    // Auto-hide controls
+    if (showControls) {
+      clearTimeout(controlsTimeoutRef.current);
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false);
+      }, 1500);
+    }
+    return () => clearTimeout(controlsTimeoutRef.current);
+  }, [showControls]);
+
+  // Add keyboard event listener
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goToPrevious();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        goToNext();
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        enterFullscreen();
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        toggleMute();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [currentSlide, slides.length]);
+
+  const loadSlides = async () => {
+    try {
+      const slideData = await VideoSlide.list('order');
+      setSlides(slideData);
+      if (slideData.length > 0) {
+        loadVideo(0, false); // Never autoplay on initial load
+      }
+    } catch (error) {
+      console.error('Error loading slides:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const isReallyMobile = () => {
+    return (
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      (typeof window.orientation !== 'undefined') ||
+      window.innerWidth <= 800
+    );
+  };
+
+  const loadVideo = (index, shouldAutoplay = false) => {
+    if (index < 0 || index >= slides.length) return;
+    
+    setCurrentSlide(index);
+    setIsPlaying(false);
+    setIsLoading(true);
+    
+    const slide = slides[index];
+    setLoadingText(`Loading ${slide.title}...`);
+    
+    const video = videoRef.current;
+    if (video) {
+      video.pause();
+      
+      // Important: Set muted to false for autoplay with sound
+      video.muted = false;
+      setIsMuted(false);
+      
+      const onLoaded = () => {
+        video.removeEventListener('loadeddata', onLoaded);
+        video.currentTime = 0;
+        setIsLoading(false);
+        
+        // Only autoplay if explicitly requested (after user interaction)
+        if (shouldAutoplay && hasUserInteracted) {
+          video.play().then(() => {
+            setIsPlaying(true);
+          }).catch((error) => {
+            console.log('Autoplay failed:', error);
+            // If autoplay fails, just show the first frame
+            setIsPlaying(false);
+          });
+        }
+      };
+      
+      video.addEventListener('loadeddata', onLoaded);
+      
+      // Load the new video
+      if (video.src !== slide.video_url) {
+        video.src = slide.video_url;
+        video.load();
+      } else {
+        onLoaded(); // If same video, just trigger loaded
+      }
+    }
+  };
+
+  const goToPrevious = () => {
+    if (currentSlide > 0) {
+      setHasUserInteracted(true);
+      loadVideo(currentSlide - 1, true); // Autoplay after navigation
+    }
+  };
+
+  const goToNext = () => {
+    if (currentSlide < slides.length - 1) {
+      setHasUserInteracted(true);
+      loadVideo(currentSlide + 1, true); // Autoplay after navigation
+    }
+  };
+
+  const togglePlay = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    setHasUserInteracted(true);
+
+    if (isPlaying) {
+      video.pause();
+      setIsPlaying(false);
+    } else {
+      // Ensure sound is on when user clicks play
+      video.muted = false;
+      setIsMuted(false);
+      
+      video.play().then(() => {
+        setIsPlaying(true);
+      }).catch((error) => {
+        console.log('Play failed:', error);
+        setIsPlaying(false);
+      });
+    }
+  };
+
+  const toggleMute = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    const newMuted = !isMuted;
+    setIsMuted(newMuted);
+    video.muted = newMuted;
+  };
+
+  const enterFullscreen = () => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    
+    if (isIOS && isSafari && videoRef.current?.webkitEnterFullscreen) {
+      videoRef.current.webkitEnterFullscreen();
+    } else if (playerContainerRef.current?.requestFullscreen) {
+      playerContainerRef.current.requestFullscreen();
+    }
+  };
+
+  const handleTouchStart = (e) => {
+    if (!isReallyMobile()) return;
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isReallyMobile()) return;
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!isReallyMobile()) return;
+    touchEndRef.current = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+    const deltaX = touchEndRef.current.x - touchStartRef.current.x;
+    const deltaY = Math.abs(touchEndRef.current.y - touchStartRef.current.y);
+    
+    // Only process horizontal swipes (ignore vertical scrolling)
+    if (Math.abs(deltaX) > 50 && deltaY < 100) {
+      if (deltaX > 0) {
+        goToPrevious();
+      } else {
+        goToNext();
+      }
+    }
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
+  // Prevent video from intercepting touch events
+  const handleVideoTouchStart = (e) => {
+    if (isReallyMobile()) {
+      e.stopPropagation();
+    }
+  };
+
+  const handleVideoClick = (e) => {
+    e.stopPropagation();
+    if (!isReallyMobile()) {
+      // On desktop, clicking video toggles play
+      togglePlay();
+    }
+    showControlsTemporarily();
+  };
+
+  const showControlsTemporarily = () => {
+    setShowControls(true);
+  };
+
+  const getSlideCounter = () => {
+    if (slides.length === 0) return 'Loading...';
+    
+    const slide = slides[currentSlide];
+    if (!slide) return '';
+    
+    let displayText = slide.title;
+    return `${displayText} / ${slides.length}`;
+  };
+
+  if (isLoading && slides.length === 0) {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        background: 'black',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '3rem',
+            height: '3rem',
+            border: '3px solid rgba(255,133,51,0.2)',
+            borderTop: '3px solid hsl(14,100%,60%)',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 1rem'
+          }}></div>
+          <div>Loading slides...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <style jsx>{`
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+
+        body {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          background: black;
+          color: white;
+          overflow: hidden;
+          user-select: none;
+        }
+
+        .player-container {
+          position: relative;
+          width: 100vw;
+          height: 100vh;
+          background: black;
+        }
+
+        .studio-branding {
+          position: absolute;
+          top: 1rem;
+          right: 1rem;
+          z-index: 1001;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .studio-brand-block {
+          background: rgba(0,0,0,0.7);
+          padding: 0.5rem 0.75rem;
+          border-radius: 0.5rem;
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(255,133,51,0.2);
+        }
+
+        .dropdown-button-container {
+          background: rgba(0,0,0,0.7);
+          padding: 0.5rem;
+          border-radius: 0.5rem;
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(255,133,51,0.2);
+          position: relative;
+          z-index: 1001;
+        }
+
+        .studio-name {
+          color: hsl(14,100%,60%);
+          font-weight: 700;
+          font-size: 1.125rem;
+          letter-spacing: 0.05em;
+          text-shadow: 0 0 10px rgba(255,133,51,0.3);
+        }
+
+        .dropdown-button {
+          background: none;
+          border: none;
+          color: hsl(14,100%,60%);
+          cursor: pointer;
+          padding: 0.25rem;
+          border-radius: 0.25rem;
+          transition: all 0.2s ease;
+        }
+
+        .dropdown-button:hover {
+          color: white;
+          background: rgba(255,133,51,0.1);
+        }
+
+        .dropdown-menu {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          margin-top: 0.5rem;
+          width: 12rem;
+          background: rgba(255,255,255,0.95);
+          backdrop-filter: blur(16px);
+          border-radius: 0.5rem;
+          border: 1px solid rgba(0,0,0,0.1);
+          box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+          max-height: 60vh;
+          overflow-y: auto;
+          z-index: 1002;
+          display: ${showDropdown ? 'block' : 'none'};
+          opacity: ${showDropdown ? '1' : '0'};
+          transform: translateY(${showDropdown ? '0' : '-10px'});
+          transition: all 0.3s ease;
+        }
+
+        .dropdown-header {
+          padding: 0.75rem 1rem;
+          border-bottom: 1px solid rgba(0,0,0,0.1);
+          color: hsl(14,100%,60%);
+          font-weight: 600;
+          font-size: 0.875rem;
+        }
+
+        .chapter-list {
+          padding: 0.5rem;
+        }
+
+        .chapter-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          padding: 0.5rem 0.75rem;
+          border: none;
+          background: none;
+          color: #374151;
+          cursor: pointer;
+          border-radius: 0.375rem;
+          transition: all 0.2s ease;
+          font-size: 0.875rem;
+          text-align: left;
+        }
+
+        .chapter-item:hover {
+          background: rgba(255,133,51,0.1);
+          color: hsl(14,100%,60%);
+        }
+
+        .chapter-item.active {
+          background: rgba(255,133,51,0.2);
+          color: hsl(14,100%,60%);
+        }
+
+        .video-container {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+
+        .main-video {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          pointer-events: ${isReallyMobile() ? 'none' : 'auto'};
+        }
+
+        .slide-counter {
+          position: absolute;
+          top: 1rem;
+          left: 1rem;
+          z-index: 50;
+          background: rgba(0,0,0,0.7);
+          padding: 0.5rem 1rem;
+          border-radius: 0.5rem;
+          backdrop-filter: blur(12px);
+          font-size: 0.875rem;
+          font-weight: 500;
+        }
+
+        .controls-container {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 50%, transparent 100%);
+          padding: 4rem 1rem 1rem;
+          transition: all 0.3s ease;
+          z-index: 2000;
+          opacity: ${showControls ? '1' : '0'};
+          transform: translateY(${showControls ? '0' : '100%'});
+          pointer-events: ${showControls ? 'auto' : 'none'};
+        }
+
+        .controls-panel {
+          background: rgba(0,0,0,0.8);
+          backdrop-filter: blur(16px);
+          border-radius: 1rem;
+          padding: 1rem;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+          border: 1px solid rgba(255,255,255,0.1);
+          box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+
+        .controls-left, .controls-right {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        .control-button {
+          background: rgba(255,255,255,0.1);
+          border: 1px solid rgba(255,255,255,0.2);
+          color: white;
+          cursor: pointer;
+          padding: 0.75rem;
+          border-radius: 0.75rem;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 3rem;
+          min-height: 3rem;
+          z-index: 2001;
+        }
+
+        .control-button:hover:not(:disabled) {
+          color: hsl(14,100%,60%);
+          background: rgba(255,133,51,0.1);
+          border-color: rgba(255,133,51,0.3);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(255,133,51,0.2);
+        }
+
+        .control-button:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        .play-button {
+          background: linear-gradient(135deg, hsl(14,100%,60%) 0%, hsl(14,100%,55%) 100%) !important;
+          color: white !important;
+          padding: 1rem !important;
+          border-radius: 50% !important;
+          border: none !important;
+          box-shadow: 0 6px 20px rgba(255,133,51,0.4);
+        }
+
+        .play-button:hover {
+          background: linear-gradient(135deg, hsl(14,100%,55%) 0%, hsl(14,100%,50%) 100%) !important;
+          box-shadow: 0 8px 25px rgba(255,133,51,0.5);
+          transform: translateY(-2px) !important;
+        }
+
+        .loading-state {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0,0,0,0.85);
+          backdrop-filter: blur(8px);
+          z-index: 30;
+        }
+
+        .loading-spinner {
+          width: 3rem;
+          height: 3rem;
+          border: 3px solid rgba(255,133,51,0.2);
+          border-top: 3px solid hsl(14,100%,60%);
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .mobile-swipe-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          z-index: 1500;
+          background: transparent;
+          display: ${isReallyMobile() ? 'block' : 'none'};
+          touch-action: none;
+        }
+
+        .mobile-fullscreen-arrows {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          pointer-events: none;
+          z-index: 1001;
+          display: none;
+        }
+
+        .mobile-fullscreen-arrow {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 40px;
+          height: 40px;
+          background: rgba(0, 0, 0, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 50%;
+          color: white;
+          font-size: 18px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          pointer-events: auto;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+          backdrop-filter: blur(8px);
+        }
+
+        .mobile-fullscreen-arrow:hover {
+          background: rgba(255, 133, 51, 0.8);
+          color: white;
+          transform: translateY(-50%) scale(1.1);
+          border-color: hsl(14,100%,60%);
+        }
+
+        .mobile-fullscreen-arrow:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        .mobile-fullscreen-arrow.left {
+          left: 15px;
+        }
+
+        .mobile-fullscreen-arrow.right {
+          right: 15px;
+        }
+
+        @media (max-width: 768px) {
+          .player-container:fullscreen .mobile-fullscreen-arrows,
+          .player-container:-webkit-full-screen .mobile-fullscreen-arrows,
+          .player-container:-moz-full-screen .mobile-fullscreen-arrows {
+            display: block !important;
+          }
+        }
+      `}</style>
+
+      <div 
+        ref={playerContainerRef}
+        className="player-container"
+        onMouseMove={showControlsTemporarily}
+        onTouchStart={showControlsTemporarily}
+      >
+        {/* Studio Branding */}
+        <div className="studio-branding">
+          <div className="studio-brand-block">
+            <span className="studio-name">VAMPUCA AI</span>
+          </div>
+          <div className="dropdown-button-container">
+            <button 
+              className="dropdown-button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDropdown(!showDropdown);
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </button>
+            
+            <div className="dropdown-menu">
+              <div className="dropdown-header">Select Chapter</div>
+              <div className="chapter-list">
+                {slides.map((slide, index) => (
+                  <button
+                    key={slide.id}
+                    className={`chapter-item ${index === currentSlide ? 'active' : ''}`}
+                    onClick={() => {
+                      setHasUserInteracted(true);
+                      loadVideo(index, true); // Autoplay when selected from dropdown
+                      setShowDropdown(false);
+                    }}
+                  >
+                    <span>{slide.title}</span>
+                    <span style={{ opacity: '0.5', fontSize: '1.2em', marginLeft: 'auto' }}>›</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Slide Counter */}
+        <div className="slide-counter">
+          {getSlideCounter()}
+        </div>
+
+        {/* Main Video Container */}
+        <div className="video-container" onClick={showControlsTemporarily}>
+          <video
+            ref={videoRef}
+            className="main-video"
+            preload="metadata"
+            playsInline
+            webkit-playsinline="true"
+            muted={false}
+            onContextMenu={(e) => e.preventDefault()}
+            controlsList="nodownload nofullscreen noremoteplayback"
+            disablePictureInPicture
+            onClick={handleVideoClick}
+            onTouchStart={handleVideoTouchStart}
+            style={{
+              WebkitTouchCallout: 'none',
+              WebkitUserSelect: 'none',
+              touchAction: 'none'
+            }}
+          />
+          
+          {/* Mobile Swipe Overlay - Higher z-index than video */}
+          <div 
+            className="mobile-swipe-overlay"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          />
+
+          {/* Loading State */}
+          {isLoading && (
+            <div className="loading-state">
+              <div>
+                <div className="loading-spinner"></div>
+                <div style={{ textAlign: 'center', color: 'white', fontSize: '0.875rem', marginTop: '1rem' }}>
+                  {loadingText}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Fullscreen Navigation Arrows */}
+        <div className="mobile-fullscreen-arrows">
+          <button 
+            className="mobile-fullscreen-arrow left"
+            onClick={goToPrevious}
+            disabled={currentSlide === 0}
+          >
+            ‹
+          </button>
+          <button 
+            className="mobile-fullscreen-arrow right"
+            onClick={goToNext}
+            disabled={currentSlide === slides.length - 1}
+          >
+            ›
+          </button>
+        </div>
+
+        {/* Controls */}
+        <div className="controls-container">
+          <div className="controls-panel">
+            <div className="controls-left">
+              <button 
+                className="control-button"
+                onClick={goToPrevious}
+                disabled={currentSlide === 0}
+                style={{ display: currentSlide === 0 ? 'none' : 'flex' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M19 12H5m7-7l-7 7 7 7"/>
+                </svg>
+              </button>
+              
+              <button 
+                className="control-button play-button"
+                onClick={togglePlay}
+                style={{ display: currentSlide === 0 ? 'none' : 'flex' }}
+              >
+                {isPlaying ? (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="6" y="4" width="4" height="16"/>
+                    <rect x="14" y="4" width="4" height="16"/>
+                  </svg>
+                ) : (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polygon points="5,3 19,12 5,21"/>
+                  </svg>
+                )}
+              </button>
+              
+              <button 
+                className="control-button"
+                onClick={goToNext}
+                disabled={currentSlide === slides.length - 1}
+                style={{ display: currentSlide === slides.length - 1 ? 'none' : 'flex' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M5 12h14m-7-7l7 7-7 7"/>
+                </svg>
+              </button>
+            </div>
+
+            <div className="controls-right">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button className="control-button" onClick={toggleMute}>
+                  {isMuted ? (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/>
+                      <line x1="23" y1="9" x2="17" y2="15"/>
+                      <line x1="17" y1="9" x2="23" y2="15"/>
+                    </svg>
+                  ) : (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/>
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                    </svg>
+                  )}
+                </button>
+                <input 
+                  type="range"
+                  min="0" 
+                  max="100" 
+                  defaultValue="50"
+                  onChange={(e) => {
+                    const video = videoRef.current;
+                    if (video) {
+                      const v = e.target.value / 100;
+                      video.volume = v;
+                      const newMuted = v === 0;
+                      setIsMuted(newMuted);
+                      video.muted = newMuted;
+                    }
+                  }}
+                  style={{
+                    width: '80px',
+                    appearance: 'none',
+                    height: '4px',
+                    background: 'rgba(255,255,255,0.3)',
+                    borderRadius: '2px',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                />
+              </div>
+              
+              <button className="control-button" onClick={enterFullscreen}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}

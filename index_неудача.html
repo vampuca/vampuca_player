@@ -655,6 +655,14 @@
         }
     }
 
+    /* Скрыть стрелки на десктопе, показывать только на мобильных/fullscreen */
+    @media (min-width: 769px) {
+      .navigation-arrows { display: none !important; }
+    }
+    @media (max-width: 768px) {
+      .navigation-arrows { display: flex !important; }
+    }
+
     /* Credits slide styling */
     .credits {
         position: absolute;
@@ -728,8 +736,14 @@
         }
     }
 
-    /* Overlay всегда поверх видео на мобильных и в fullscreen, pointer-events: auto только на overlay */
     @media (max-width: 768px) {
+      .main-video {
+        pointer-events: none !important;
+      }
+      .player-container:fullscreen .main-video,
+      .player-container:-webkit-full-screen .main-video {
+        pointer-events: none !important;
+      }
       #mobileSwipeOverlay {
         display: block !important;
         pointer-events: auto !important;
@@ -737,16 +751,7 @@
         position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1500;
         background: transparent;
       }
-      .player-container:fullscreen #mobileSwipeOverlay,
-      .player-container:-webkit-full-screen #mobileSwipeOverlay,
-      .player-container:-moz-full-screen #mobileSwipeOverlay {
-        display: block !important;
-        pointer-events: auto !important;
-        z-index: 2001;
-      }
-      .main-video {
-        pointer-events: none !important;
-      }
+      .mobile-fullscreen-arrows, .mobile-mute-btn { display: block !important; }
     }
     @media (min-width: 769px) {
       #mobileSwipeOverlay, .mobile-fullscreen-arrows, .mobile-mute-btn { display: none !important; }
@@ -773,33 +778,6 @@
       display: flex; align-items: center; justify-content: center; pointer-events: auto;
     }
     .mobile-mute-btn svg { width: 22px; height: 22px; }
-    /* Показывать боковые стрелки только на мобильных и в мобильном fullscreen, скрывать на десктопе */
-    @media (min-width: 769px) {
-      .navigation-arrows,
-      .mobile-fullscreen-arrows {
-        display: none !important;
-      }
-    }
-    @media (max-width: 768px) {
-      /* В обычном мобильном режиме показывать только .navigation-arrows */
-      .navigation-arrows {
-        display: flex !important;
-      }
-      .mobile-fullscreen-arrows {
-        display: none !important;
-      }
-      /* В мобильном fullscreen показывать только .mobile-fullscreen-arrows, а .navigation-arrows скрывать */
-      .player-container:fullscreen .navigation-arrows,
-      .player-container:-webkit-full-screen .navigation-arrows,
-      .player-container:-moz-full-screen .navigation-arrows {
-        display: none !important;
-      }
-      .player-container:fullscreen .mobile-fullscreen-arrows,
-      .player-container:-webkit-full-screen .mobile-fullscreen-arrows,
-      .player-container:-moz-full-screen .mobile-fullscreen-arrows {
-        display: block !important;
-      }
-    }
 </style>
 </head> <body> <div class="player-container" id="playerContainer"> <!-- Studio Branding --> <div class="studio-branding"> <div class="studio-brand-block"> <span class="studio-name">VAMPUCA AI</span> </div> <div class="dropdown-button-container"> <button class="dropdown-button" id="dropdownButton"> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <path d="M6 9l6 6 6-6"/> </svg> </button>
             <div id="dropdownMenu" class="dropdown-menu">
@@ -999,9 +977,9 @@
             overlay.style.pointerEvents = 'none';
             
             // Remove touch handlers
-            overlay.removeEventListener('touchstart', handleTouchStart);
-            overlay.removeEventListener('touchmove', handleTouchMove);
-            overlay.removeEventListener('touchend', handleTouchEnd);
+            videoContainer.removeEventListener('touchstart', handleTouchStart);
+            videoContainer.removeEventListener('touchmove', handleTouchMove);
+            videoContainer.removeEventListener('touchend', handleTouchEnd);
             
             // Remove Hammer.js handlers if any
             if (overlay._hammer) {
@@ -1013,28 +991,28 @@
         
         console.log('Mobile detected - enabling touch handlers and overlays');
         
-        // Add touch handlers to overlay (like in indexbase44.html)
-        overlay.addEventListener('touchstart', handleTouchStart, { passive: false });
-        overlay.addEventListener('touchmove', handleTouchMove, { passive: false });
-        overlay.addEventListener('touchend', handleTouchEnd, { passive: false });
+        // Add touch handlers to video container (like in indexbase44.html)
+        videoContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+        videoContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+        videoContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
         
         // Mobile overlay
         overlay.style.display = 'block';
         overlay.style.pointerEvents = 'auto';
         overlay.style.background = 'transparent';
-        overlay.style.zIndex = 1500;
+        overlay.style.zIndex = 1000;
         
         // Setup Hammer.js for overlay
         if (!overlay._hammer) {
-            console.log('Setting up Hammer.js for overlay');
+            console.log('Setting up Hammer.js for regular overlay');
             var hammer = new Hammer(overlay);
             overlay._hammer = hammer;
             hammer.on('swipeleft', function() { 
-                console.log('Swipe left detected on overlay');
+                console.log('Swipe left detected on regular overlay');
                 goToNext(); 
             });
             hammer.on('swiperight', function() { 
-                console.log('Swipe right detected on overlay');
+                console.log('Swipe right detected on regular overlay');
                 goToPrevious(); 
             });
         }
@@ -1076,6 +1054,7 @@
     }
     // --- Load video and always show first frame ---
     function loadVideo(index, autoplay = false) {
+        console.log('[DEBUG_2] loadVideo called', {index, autoplay, stack: new Error().stack});
         if (index < 0 || index >= videoSources.length) return;
         currentSlide = index;
         isPlaying = false;
@@ -1088,16 +1067,59 @@
         if (mainVideo.src !== videoSrc) {
             mainVideo.src = videoSrc;
             mainVideo.load();
+            console.log('[DEBUG_2] set src and load', {src: mainVideo.src, stack: new Error().stack});
         }
         mainVideo.currentTime = 0;
         mainVideo.muted = isMuted; // Always use current mute state (default: false)
+        console.log('[DEBUG_2] before loadeddata', {
+            currentTime: mainVideo.currentTime,
+            paused: mainVideo.paused,
+            readyState: mainVideo.readyState,
+            muted: mainVideo.muted,
+            error: mainVideo.error,
+            stack: new Error().stack
+        });
+        // Подписка на все основные события video для отладки
+        const debugEvents = ['play','pause','canplay','loadedmetadata','loadeddata','timeupdate','seeking','seeked','stalled','waiting','error','emptied','abort','suspend','ratechange','durationchange','volumechange','progress','ended'];
+        debugEvents.forEach(ev => {
+            mainVideo.addEventListener(ev, function debugListener(e) {
+                console.log(`[DEBUG_2] video event: ${ev}`, {
+                    currentTime: mainVideo.currentTime,
+                    paused: mainVideo.paused,
+                    readyState: mainVideo.readyState,
+                    muted: mainVideo.muted,
+                    error: mainVideo.error,
+                    stack: new Error().stack
+                });
+                // Снимаем подписку после первого срабатывания для loadeddata
+                if (ev === 'loadeddata') mainVideo.removeEventListener(ev, debugListener);
+            });
+        });
         // Show first frame after loadeddata
         mainVideo.addEventListener('loadeddata', function onLoaded() {
             mainVideo.removeEventListener('loadeddata', onLoaded);
+            console.log('[DEBUG_2] loadeddata', {
+                currentTime: mainVideo.currentTime,
+                paused: mainVideo.paused,
+                readyState: mainVideo.readyState,
+                muted: mainVideo.muted,
+                error: mainVideo.error,
+                stack: new Error().stack
+            });
             mainVideo.currentTime = 0;
+            setTimeout(() => {
+                console.log('[DEBUG_2] after set currentTime=0', {
+                    currentTime: mainVideo.currentTime,
+                    paused: mainVideo.paused,
+                    readyState: mainVideo.readyState,
+                    muted: mainVideo.muted,
+                    error: mainVideo.error,
+                    stack: new Error().stack
+                });
+            }, 100);
             loadingState.classList.add('hidden');
             if (autoplay) {
-                mainVideo.play().catch(()=>{});
+                mainVideo.play().catch((e)=>{console.log('[DEBUG_2] play() error', e, {stack: new Error().stack});});
                 isPlaying = true;
                 updatePlayButton();
             }
@@ -1117,6 +1139,10 @@
         }
     }
     function updateMuteButton() {
+        if (!muteIcon || !mutedIcon) {
+            console.log('[DEBUG] muteIcon or mutedIcon not found');
+            return;
+        }
         if (isMuted) {
             muteIcon.classList.add('hidden');
             mutedIcon.classList.remove('hidden');
@@ -1124,6 +1150,7 @@
             muteIcon.classList.remove('hidden');
             mutedIcon.classList.add('hidden');
         }
+        console.log('[DEBUG] updateMuteButton, isMuted:', isMuted);
     }
     function updateSlideCounter() {
         let displayText;
@@ -1284,27 +1311,74 @@
     document.addEventListener('mousemove', showControlsTemporarily);
     document.addEventListener('touchstart', showControlsTemporarily);
     videoContainer.addEventListener('click', showControlsTemporarily);
-    // --- Arrow button handlers ---
-    prevBtn.addEventListener('click', function(e) {
-        console.log('Prev arrow clicked');
+    // --- Arrow button handlers (универсальные) ---
+    function handlePrev(e) {
+        if (e) e.stopPropagation();
         goToPrevious();
-    });
-    nextBtn.addEventListener('click', function(e) {
-        console.log('Next arrow clicked');
+    }
+    function handleNext(e) {
+        if (e) e.stopPropagation();
         goToNext();
-    });
-    
-    // --- Mobile fullscreen arrow handlers ---
-    mobilePrevArrow.addEventListener('click', function(e) {
-        console.log('Mobile prev arrow clicked');
-        e.stopPropagation();
-        goToPrevious();
-    });
-    mobileNextArrow.addEventListener('click', function(e) {
-        console.log('Mobile next arrow clicked');
-        e.stopPropagation();
-        goToNext();
-    });
+    }
+    if (prevBtn) prevBtn.onclick = handlePrev;
+    if (nextBtn) nextBtn.onclick = handleNext;
+    if (prevArrow) prevArrow.onclick = handlePrev;
+    if (nextArrow) nextArrow.onclick = handleNext;
+    if (mobilePrevArrow) mobilePrevArrow.onclick = handlePrev;
+    if (mobileNextArrow) mobileNextArrow.onclick = handleNext;
+
+    // --- Mute button handler (универсальный) ---
+    const mobileMuteIcon = document.getElementById('mobileMuteIcon');
+    const mobileMutedIcon = document.getElementById('mobileMutedIcon');
+
+    function handleMute(e) {
+        if (e) e.stopPropagation();
+        isMuted = !isMuted;
+        if (mainVideo) {
+            mainVideo.muted = isMuted;
+            console.log('[DEBUG] mainVideo.muted set to:', mainVideo.muted);
+        } else {
+            console.log('[DEBUG] mainVideo not found');
+        }
+        updateMuteButton();
+        updateMobileMuteBtn();
+        console.log('[DEBUG] handleMute called, isMuted:', isMuted);
+    }
+    console.log('[DEBUG] muteBtn:', muteBtn);
+    console.log('[DEBUG] mobileMuteBtn:', mobileMuteBtn);
+    if (!muteBtn) console.warn('[DEBUG] muteBtn is null!');
+    if (!mobileMuteBtn) console.warn('[DEBUG] mobileMuteBtn is null!');
+    if (muteBtn) muteBtn.onclick = handleMute;
+    if (mobileMuteBtn) mobileMuteBtn.onclick = handleMute;
+
+    function updateMuteButton() {
+        if (!muteIcon || !mutedIcon) {
+            console.log('[DEBUG] muteIcon or mutedIcon not found');
+            return;
+        }
+        if (isMuted) {
+            muteIcon.classList.add('hidden');
+            mutedIcon.classList.remove('hidden');
+        } else {
+            muteIcon.classList.remove('hidden');
+            mutedIcon.classList.add('hidden');
+        }
+        console.log('[DEBUG] updateMuteButton, isMuted:', isMuted);
+    }
+    function updateMobileMuteBtn() {
+        if (!mobileMuteIcon || !mobileMutedIcon) {
+            console.log('[DEBUG] mobileMuteIcon or mobileMutedIcon not found');
+            return;
+        }
+        if (isMuted) {
+            mobileMuteIcon.style.display = 'none';
+            mobileMutedIcon.style.display = '';
+        } else {
+            mobileMuteIcon.style.display = '';
+            mobileMutedIcon.style.display = 'none';
+        }
+        console.log('[DEBUG] updateMobileMuteBtn, isMuted:', isMuted);
+    }
     // --- Keyboard navigation ---
     document.addEventListener('keydown', function(e) {
         if (e.key === ' ' || e.key === 'Spacebar') {
@@ -1336,7 +1410,7 @@
     function initialize() {
         enableMobileSwipe();
         generateChapterList();
-        loadVideo(0); // Always start with Title slide
+        loadVideo(0, false); // Always start with Title slide, no autoplay
         showControlsTemporarily();
     }
     document.addEventListener('DOMContentLoaded', initialize);
@@ -1382,7 +1456,10 @@
         console.log('[DEBUG] handleTouchEnd', {touchEnd, deltaX, deltaY});
       }
       function updateMobileMuteBtn() {
-        if (!mobileMuteIcon || !mobileMutedIcon) return;
+        if (!mobileMuteIcon || !mobileMutedIcon) {
+          console.log('[DEBUG] mobileMuteIcon or mobileMutedIcon not found');
+          return;
+        }
         if (isMuted) {
           mobileMuteIcon.style.display = 'none';
           mobileMutedIcon.style.display = '';
