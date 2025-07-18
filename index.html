@@ -177,9 +177,7 @@
         object-fit: contain;
     }
     /* Видео становится "неприкасаемым" для браузера */
-    #mainVideo {
-        pointer-events: none;
-    }
+    /* Удаляю правило, делаю видео снова интерактивным */
 
     .slide-counter {
         position: absolute;
@@ -529,7 +527,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        pointer-events: none;
+        pointer-events: none; /* Контейнер не перехватывает события */
         z-index: 999;
         display: none; /* Hidden by default */
     }
@@ -547,7 +545,7 @@
         font-size: 16px;
         cursor: pointer;
         transition: all 0.3s ease;
-        pointer-events: auto;
+        pointer-events: auto; /* Кнопки кликабельны */
         display: flex;
         align-items: center;
         justify-content: center;
