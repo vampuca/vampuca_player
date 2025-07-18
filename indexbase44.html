@@ -1,0 +1,351 @@
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ChevronDown, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+// --- Animated Credits Screen Component ---
+const CreditsScreen = ({ onReplay }) => (
+  <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460] text-white p-8 text-center credits-animate-in">
+    <div className="max-w-md space-y-4">
+      <p className="text-2xl font-bold credit-line-1">Vampuca AI Presents</p>
+      <p className="text-lg credit-line-2">A KLKT Production</p>
+      <p className="text-lg credit-line-3">Directed by AI</p>
+      <p className="text-lg credit-line-4">Music by The Algorithm</p>
+      <p className="text-lg credit-line-5">Special Thanks to the Human Viewer</p>
+      <p className="text-sm opacity-80 mt-6 credit-line-6">© 2024 Vampuca AI. All Rights Reserved.</p>
+    </div>
+    <Button
+      variant="outline"
+      onClick={onReplay}
+      className="mt-12 bg-transparent border-orange-500/50 text-orange-400 hover:bg-orange-500/10 hover:text-orange-300 credit-line-7"
+    >
+      <RotateCcw className="w-4 h-4 mr-2" />
+      Replay
+    </Button>
+  </div>
+);
+
+export default function Player() {
+  const videoRef = useRef(null);
+  const playerContainerRef = useRef(null);
+  const controlsTimeoutRef = useRef(null);
+  const touchStartRef = useRef({ x: 0, y: 0 });
+  const touchEndRef = useRef({ x: 0, y: 0 });
+  
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // Muted by default for autoplay
+  const [volume, setVolume] = useState(50);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // --- Video Sources from Public Assets ---
+  const videoSources = [
+    { id: 1, src: '/KLKT_TITLE.m4v', title: 'Title' },
+    ...Array.from({ length: 20 }, (_, i) => ({
+      id: i + 2,
+      src: `/KLKT_${i + 1}.m4v`,
+      title: `Chapter ${i + 1}`
+    })),
+    { id: 22, src: '/KLKT_END.m4v', title: 'End Credits' }
+  ];
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+      setIsMobile(mobile);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Fullscreen detection
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!(document.fullscreenElement || document.webkitFullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  // Load video
+  const loadVideo = useCallback((index, autoplay = false) => {
+    if (index < 0 || index >= videoSources.length) return;
+    
+    setCurrentSlide(index);
+    if (index === videoSources.length - 1) { // If it's the credits slide
+      setIsPlaying(false);
+      setIsLoading(false);
+      return;
+    }
+    
+    setIsPlaying(false); // Pause current video before loading new one
+    setIsLoading(true);
+    const video = videoRef.current;
+    if (!video) return;
+    
+    video.src = videoSources[index].src;
+    video.muted = isMuted;
+    video.volume = volume / 100;
+    
+    const onLoadedData = () => {
+      setIsLoading(false);
+      if (autoplay) {
+        video.play().then(() => setIsPlaying(true)).catch(() => {});
+      }
+      video.removeEventListener('loadeddata', onLoadedData);
+    };
+    video.addEventListener('loadeddata', onLoadedData);
+    video.load();
+  }, [isMuted, volume, videoSources]);
+
+  // --- Navigation & Playback Callbacks (defined before they are used) ---
+  const goToNext = useCallback(() => {
+    setCurrentSlide(prevSlide => {
+        if (prevSlide < videoSources.length - 1) {
+            loadVideo(prevSlide + 1, true); // Always autoplay next chapter
+            return prevSlide + 1;
+        }
+        return prevSlide;
+    });
+  }, [loadVideo, videoSources.length]);
+
+  const goToPrevious = useCallback(() => {
+    const latestIsPlaying = videoRef.current ? !videoRef.current.paused : false; // Get actual playback state of current video
+    setCurrentSlide(prevSlide => {
+        if (prevSlide > 0) {
+            loadVideo(prevSlide - 1, latestIsPlaying); // Load previous, resume if it was playing
+            return prevSlide - 1;
+        }
+        return prevSlide;
+    });
+  }, [loadVideo]);
+  
+  const handleVideoEnded = useCallback(() => {
+    // Use functional update to get the latest slide number
+    setCurrentSlide(prevSlide => {
+      if (prevSlide > 0 && prevSlide < videoSources.length -1) { // Don't auto-advance from title (0) or from last video before credits
+        goToNext();
+        // This return is for setCurrentSlide, but goToNext handles the actual change
+        return prevSlide; 
+      }
+      // If it's the title screen ending, or the last video before credits, just set playing to false
+      setIsPlaying(false);
+      // For the last video before credits, explicitly load credits
+      if (prevSlide === videoSources.length - 2) {
+          loadVideo(videoSources.length - 1, false); // Load credits, no autoplay
+          return videoSources.length - 1;
+      }
+      return prevSlide;
+    });
+  }, [goToNext, loadVideo, videoSources.length]);
+
+  // --- Touch Handling ---
+  const handleTouchStart = useCallback((e) => {
+    if (!isMobile) return;
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    e.preventDefault();
+  }, [isMobile]);
+
+  const handleTouchMove = useCallback((e) => {
+    if (!isMobile) return;
+    e.preventDefault();
+  }, [isMobile]);
+
+  const handleTouchEnd = useCallback((e) => {
+    if (!isMobile) return;
+    touchEndRef.current = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+    const deltaX = touchEndRef.current.x - touchStartRef.current.x;
+    if (Math.abs(deltaX) > 50) {
+      if (deltaX > 0) goToPrevious(); else goToNext();
+    }
+    e.preventDefault();
+  }, [isMobile, goToNext, goToPrevious]);
+
+  // --- Play/Pause & Controls ---
+  const togglePlay = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (isPlaying) video.pause(); else video.play().then(() => setIsPlaying(true)).catch(() => {});
+  }, [isPlaying]);
+
+  const toggleMute = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const newMuted = !isMuted;
+    setIsMuted(newMuted);
+    video.muted = newMuted;
+    if (!newMuted && volume === 0) {
+      setVolume(50);
+      video.volume = 0.5;
+    }
+  }, [isMuted, volume]);
+
+  const handleVolumeChange = useCallback((newVolume) => {
+    const video = videoRef.current;
+    if (!video) return;
+    setVolume(newVolume);
+    video.volume = newVolume / 100;
+    setIsMuted(newVolume === 0);
+    video.muted = newVolume === 0;
+  }, []);
+  
+  const toggleFullscreen = useCallback(() => {
+    const container = playerContainerRef.current;
+    if (!container) return;
+    if (!isFullscreen) {
+      if (container.requestFullscreen) container.requestFullscreen();
+      else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+  }, [isFullscreen]);
+
+  const showControlsTemporarily = useCallback(() => {
+    setShowControls(true);
+    clearTimeout(controlsTimeoutRef.current);
+    controlsTimeoutRef.current = setTimeout(() => {
+      if (!showDropdown) setShowControls(false);
+    }, 3000);
+  }, [showDropdown]);
+
+  // --- Effects ---
+  useEffect(() => loadVideo(0), [loadVideo]); // Load initial video
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ([' ', 'Spacebar'].includes(e.key)) { e.preventDefault(); togglePlay(); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); goToPrevious(); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); goToNext(); }
+      else if (e.key.toLowerCase() === 'f') { e.preventDefault(); toggleFullscreen(); }
+      else if (e.key.toLowerCase() === 'm') { e.preventDefault(); toggleMute(); }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [togglePlay, goToPrevious, goToNext, toggleFullscreen, toggleMute]);
+
+  const isCredits = currentSlide === videoSources.length - 1;
+
+  return (
+    <div 
+      ref={playerContainerRef}
+      className="relative w-full h-screen bg-black overflow-hidden select-none"
+      style={{ touchAction: 'manipulation' }}
+      onMouseMove={showControlsTemporarily}
+      onTouchStart={showControlsTemporarily}
+    >
+      {/* Branding & Dropdown */}
+      {!isCredits && (
+        <>
+          <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
+            <div className="bg-black/70 backdrop-blur-lg px-3 py-2 rounded-lg border border-orange-500/20">
+              <span className="text-orange-500 font-bold text-lg tracking-wider drop-shadow-lg">VAMPUCA AI</span>
+            </div>
+            <div className="relative">
+              <Button variant="ghost" size="sm" onClick={() => setShowDropdown(!showDropdown)} className="bg-black/70 backdrop-blur-lg border border-orange-500/20 text-orange-500 hover:bg-orange-500/10"><ChevronDown className="w-4 h-4" /></Button>
+              {showDropdown && (
+                <div className="absolute top-full right-0 mt-2 w-56 bg-white/95 backdrop-blur-lg rounded-lg border border-black/10 shadow-2xl max-h-60 overflow-y-auto z-50">
+                  <div className="p-3 border-b border-black/10 text-orange-500 font-semibold text-sm">Select Chapter</div>
+                  <div className="p-2">{videoSources.map((video, index) => (
+                    <button key={video.id} onClick={() => { loadVideo(index, true); setShowDropdown(false); }} className={`w-full text-left px-3 py-2 rounded-md text-sm transition-all duration-200 flex items-center justify-between ${index === currentSlide ? 'bg-orange-500/20 text-orange-600' : 'text-gray-700 hover:bg-orange-500/10 hover:text-orange-600'}`}>
+                      <span>{video.title}</span><ChevronRight className="w-3 h-3 opacity-50" />
+                    </button>))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="absolute top-4 left-4 z-50 bg-black/70 backdrop-blur-lg px-4 py-2 rounded-lg">
+            <span className="text-white font-medium text-sm">{videoSources[currentSlide].title} / {videoSources.length}</span>
+          </div>
+        </>
+      )}
+
+      {/* Main Content: Video or Credits */}
+      <div className="w-full h-full" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onClick={showControlsTemporarily}>
+        {isCredits ? (
+          <CreditsScreen onReplay={() => loadVideo(0)} />
+        ) : (
+          <video 
+            key={videoSources[currentSlide].src}
+            ref={videoRef} 
+            className="w-full h-full object-contain" 
+            playsInline 
+            preload="metadata" 
+            onPlay={() => setIsPlaying(true)} 
+            onPause={() => setIsPlaying(false)} 
+            onLoadStart={() => setIsLoading(true)} 
+            onLoadedData={() => setIsLoading(false)} 
+            onEnded={handleVideoEnded}
+          />
+        )}
+      </div>
+
+      {/* Overlays */}
+      {isLoading && !isCredits && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/85 backdrop-blur-sm z-30">
+          <div className="text-center">
+            <div className="w-12 h-12 border-3 border-orange-500/20 border-t-orange-500 rounded-full animate-spin mx-auto mb-4"></div>
+            <div className="text-white text-sm">Loading {videoSources[currentSlide].title}...</div>
+          </div>
+        </div>
+      )}
+
+      {isMobile && isFullscreen && !isCredits && (
+        <div className="absolute inset-0 pointer-events-none z-40">
+          <button onClick={(e) => { e.stopPropagation(); goToPrevious(); }} disabled={currentSlide === 0} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/70 backdrop-blur-lg border border-white/30 rounded-full text-white disabled:opacity-40 pointer-events-auto flex items-center justify-center"><ChevronLeft className="w-5 h-5" /></button>
+          <button onClick={(e) => { e.stopPropagation(); goToNext(); }} disabled={currentSlide >= videoSources.length - 1} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/70 backdrop-blur-lg border border-white/30 rounded-full text-white disabled:opacity-40 pointer-events-auto flex items-center justify-center"><ChevronRight className="w-5 h-5" /></button>
+        </div>
+      )}
+
+      {/* Controls Panel */}
+      {!isCredits && (
+        <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent pt-16 pb-4 px-4 transition-all duration-300 z-40 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+          <div className="bg-black/80 backdrop-blur-lg rounded-2xl p-4 border border-white/10 shadow-2xl flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" onClick={goToPrevious} disabled={currentSlide === 0} className="bg-white/10 text-white hover:bg-orange-500/20 disabled:opacity-40"><SkipBack className="w-5 h-5" /></Button>
+              {currentSlide > 0 && <Button variant="ghost" size="lg" onClick={togglePlay} className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-full p-3 shadow-lg">{isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}</Button>}
+              <Button variant="ghost" size="sm" onClick={goToNext} disabled={currentSlide >= videoSources.length - 1} className="bg-white/10 text-white hover:bg-orange-500/20 disabled:opacity-40"><SkipForward className="w-5 h-5" /></Button>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={toggleMute} className="bg-white/10 text-white hover:bg-orange-500/20">{isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}</Button>
+                <input type="range" min="0" max="100" value={isMuted ? 0 : volume} onChange={(e) => handleVolumeChange(Number(e.target.value))} className="w-20 h-1 bg-white/30 rounded-lg appearance-none cursor-pointer slider" />
+              </div>
+              <Button variant="ghost" size="sm" onClick={toggleFullscreen} className="bg-white/10 text-white hover:bg-orange-500/20"><Maximize className="w-4 h-4" /></Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {showDropdown && <div className="fixed inset-0 z-30" onClick={() => setShowDropdown(false)} />}
+
+      <style jsx>{`
+        .slider::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; background: #f97316; border-radius: 50%; cursor: pointer; }
+        .slider::-moz-range-thumb { width: 12px; height: 12px; background: #f97316; border-radius: 50%; cursor: pointer; border: none; }
+        .credits-animate-in { animation: fadeIn 2s ease-in-out; }
+        .credit-line-1, .credit-line-2, .credit-line-3, .credit-line-4, .credit-line-5, .credit-line-6, .credit-line-7 { opacity: 0; animation: slideUp 1s ease-out forwards; }
+        .credit-line-1 { animation-delay: 0.5s; }
+        .credit-line-2 { animation-delay: 1s; }
+        .credit-line-3 { animation-delay: 1.5s; }
+        .credit-line-4 { animation-delay: 2s; }
+        .credit-line-5 { animation-delay: 2.5s; }
+        .credit-line-6 { animation-delay: 3s; }
+        .credit-line-7 { animation-delay: 3.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
+    </div>
+  );
+}

@@ -592,6 +592,73 @@
                 display: block !important;
             }
         }
+        
+        /* Mobile fullscreen navigation arrows - always visible on mobile fullscreen */
+        .mobile-fullscreen-arrows {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 1001;
+            display: none;
+        }
+        
+        .mobile-fullscreen-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            backdrop-filter: blur(8px);
+        }
+        
+        .mobile-fullscreen-arrow:hover {
+            background: rgba(255, 133, 51, 0.8);
+            color: white;
+            transform: translateY(-50%) scale(1.1);
+            border-color: hsl(14,100%,60%);
+        }
+        
+        .mobile-fullscreen-arrow:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+        
+        .mobile-fullscreen-arrow.left {
+            left: 15px;
+        }
+        
+        .mobile-fullscreen-arrow.right {
+            right: 15px;
+        }
+        
+        .mobile-fullscreen-arrow:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        
+        /* Show mobile fullscreen arrows only on mobile fullscreen */
+        @media (max-width: 768px) {
+            .player-container:fullscreen .mobile-fullscreen-arrows,
+            .player-container:-webkit-full-screen .mobile-fullscreen-arrows,
+            .player-container:-moz-full-screen .mobile-fullscreen-arrows {
+                display: block !important;
+            }
+        }
 
         /* DESKTOP: Never show arrows */
         @media (min-width: 769px) {
@@ -710,7 +777,7 @@
             <!-- Mobile swipe overlay (only on mobile, always below controls) -->
             <div id="mobileSwipeOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:1000;background:transparent;display:none;"></div>
             <!-- Fullscreen swipe overlay for mobile -->
-            <div id="fullscreenSwipeOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:999;background:transparent;display:none;pointer-events:none;"></div>
+            <div id="fullscreenSwipeOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:999;background:transparent;display:none;"></div>
             <!-- Loading State -->
             <div id="loadingState" class="loading-state hidden">
                 <div>
@@ -724,6 +791,12 @@
         <div class="navigation-arrows">
             <button class="nav-arrow left" id="prevArrow">‹</button>
             <button class="nav-arrow right" id="nextArrow">›</button>
+        </div>
+        
+        <!-- Mobile Fullscreen Navigation Arrows -->
+        <div class="mobile-fullscreen-arrows">
+            <button class="mobile-fullscreen-arrow left" id="mobilePrevArrow">‹</button>
+            <button class="mobile-fullscreen-arrow right" id="mobileNextArrow">›</button>
         </div>
 
         <!-- Controls -->
@@ -835,22 +908,65 @@
         const fullscreenOverlay = document.getElementById('fullscreenSwipeOverlay');
         const prevArrow = document.getElementById('prevArrow');
         const nextArrow = document.getElementById('nextArrow');
+        const mobilePrevArrow = document.getElementById('mobilePrevArrow');
+        const mobileNextArrow = document.getElementById('mobileNextArrow');
         // --- State ---
         let currentSlide = 0;
         let isPlaying = false;
         let isMuted = false; // Sound ON by default
         let showDropdown = false;
         let controlsTimeout;
+        // --- Touch handling state ---
+        let touchStart = { x: 0, y: 0 };
+        let touchEnd = { x: 0, y: 0 };
+        
+        // --- Simple touch handling (like in indexbase44.html) ---
+        function handleTouchStart(e) {
+            if (!isReallyMobile()) return;
+            touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            console.log('Touch start:', touchStart);
+            e.preventDefault();
+        }
+        
+        function handleTouchMove(e) {
+            if (!isReallyMobile()) return;
+            e.preventDefault();
+        }
+        
+        function handleTouchEnd(e) {
+            if (!isReallyMobile()) return;
+            touchEnd = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+            const deltaX = touchEnd.x - touchStart.x;
+            console.log('Touch end, deltaX:', deltaX);
+            
+            if (Math.abs(deltaX) > 50) {
+                if (deltaX > 0) {
+                    console.log('Swipe right detected via touch');
+                    goToPrevious();
+                } else {
+                    console.log('Swipe left detected via touch');
+                    goToNext();
+                }
+            }
+            e.preventDefault();
+        }
+        
         // --- Overlay and Hammer.js swipe logic ---
         function enableMobileSwipe() {
             console.log('enableMobileSwipe called, isReallyMobile:', isReallyMobile());
             
             if (!isReallyMobile()) {
-                console.log('Desktop detected - disabling overlays');
+                console.log('Desktop detected - disabling overlays and touch handlers');
                 overlay.style.display = 'none';
                 overlay.style.pointerEvents = 'none';
                 fullscreenOverlay.style.display = 'none';
                 fullscreenOverlay.style.pointerEvents = 'none';
+                
+                // Remove touch handlers
+                videoContainer.removeEventListener('touchstart', handleTouchStart);
+                videoContainer.removeEventListener('touchmove', handleTouchMove);
+                videoContainer.removeEventListener('touchend', handleTouchEnd);
+                
                 // Remove Hammer.js handlers if any
                 if (overlay._hammer) {
                     overlay._hammer.destroy();
@@ -863,7 +979,12 @@
                 return;
             }
             
-            console.log('Mobile detected - enabling overlays and swipe');
+            console.log('Mobile detected - enabling touch handlers and overlays');
+            
+            // Add touch handlers to video container (like in indexbase44.html)
+            videoContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+            videoContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+            videoContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
             
             // Regular mobile overlay
             overlay.style.display = 'block';
@@ -907,11 +1028,44 @@
                 });
             }
             
-            // Prevent native fullscreen on mobile
+            // Also setup Hammer.js on the video element itself for iOS Safari fullscreen
+            if (!mainVideo._hammer) {
+                console.log('Setting up Hammer.js for video element');
+                var videoHammer = new Hammer(mainVideo);
+                mainVideo._hammer = videoHammer;
+                videoHammer.on('swipeleft', function() { 
+                    console.log('Swipe left detected on video element');
+                    goToNext(); 
+                });
+                videoHammer.on('swiperight', function() { 
+                    console.log('Swipe right detected on video element');
+                    goToPrevious(); 
+                });
+            }
+            
+            // iOS Safari fullscreen handlers
             mainVideo.addEventListener('webkitbeginfullscreen', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                return false;
+                console.log('iOS Safari fullscreen begin');
+                // Don't prevent - let it go fullscreen
+                setTimeout(() => {
+                    if (isReallyMobile()) {
+                        console.log('iOS Safari fullscreen - enabling fullscreen overlay');
+                        fullscreenOverlay.style.display = 'block';
+                        fullscreenOverlay.style.pointerEvents = 'auto';
+                        overlay.style.display = 'none';
+                    }
+                }, 100);
+            });
+            
+            mainVideo.addEventListener('webkitendfullscreen', function(e) {
+                console.log('iOS Safari fullscreen end');
+                if (isReallyMobile()) {
+                    console.log('iOS Safari fullscreen exit - enabling regular overlay');
+                    fullscreenOverlay.style.display = 'none';
+                    fullscreenOverlay.style.pointerEvents = 'none';
+                    overlay.style.display = 'block';
+                    overlay.style.pointerEvents = 'auto';
+                }
             });
             
             // Prevent long-press download/save on video
@@ -923,6 +1077,33 @@
         // Update overlay state on resize/orientation change
         window.addEventListener('resize', enableMobileSwipe);
         window.addEventListener('orientationchange', enableMobileSwipe);
+        
+        // Fullscreen change handlers
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+        
+        function handleFullscreenChange() {
+            console.log('Fullscreen change detected');
+            const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+            console.log('Is fullscreen:', isFullscreen);
+            
+            if (isReallyMobile()) {
+                if (isFullscreen) {
+                    console.log('Mobile fullscreen entered - enabling fullscreen overlay');
+                    fullscreenOverlay.style.display = 'block';
+                    fullscreenOverlay.style.pointerEvents = 'auto';
+                    overlay.style.display = 'none'; // Hide regular overlay in fullscreen
+                } else {
+                    console.log('Mobile fullscreen exited - enabling regular overlay');
+                    fullscreenOverlay.style.display = 'none';
+                    fullscreenOverlay.style.pointerEvents = 'none';
+                    overlay.style.display = 'block';
+                    overlay.style.pointerEvents = 'auto';
+                }
+            }
+        }
         // --- Load video and always show first frame ---
         function loadVideo(index, autoplay = false) {
             if (index < 0 || index >= videoSources.length) return;
@@ -999,6 +1180,14 @@
             prevBtn.style.display = currentSlide === 0 ? 'none' : 'flex';
             playBtn.style.display = currentSlide === 0 ? 'none' : 'flex';
             nextBtn.style.display = currentSlide === videoSources.length - 1 ? 'none' : 'flex';
+            
+            // Update mobile fullscreen arrows
+            if (mobilePrevArrow) {
+                mobilePrevArrow.disabled = currentSlide === 0;
+            }
+            if (mobileNextArrow) {
+                mobileNextArrow.disabled = currentSlide === videoSources.length - 1;
+            }
         }
         // --- Generate chapter list ---
         function generateChapterList() {
@@ -1132,6 +1321,18 @@
         });
         nextBtn.addEventListener('click', function(e) {
             console.log('Next arrow clicked');
+            goToNext();
+        });
+        
+        // --- Mobile fullscreen arrow handlers ---
+        mobilePrevArrow.addEventListener('click', function(e) {
+            console.log('Mobile prev arrow clicked');
+            e.stopPropagation();
+            goToPrevious();
+        });
+        mobileNextArrow.addEventListener('click', function(e) {
+            console.log('Mobile next arrow clicked');
+            e.stopPropagation();
             goToNext();
         });
         // --- Keyboard navigation ---
