@@ -829,7 +829,7 @@
     <!-- Main Video Container -->
     <div class="video-container" id="videoContainer" style="position:relative;">
         <video id="mainVideo" class="main-video" preload="none" playsinline webkit-playsinline muted></video>
-        <!-- Mobile swipe overlay (универсальный для всех свайпов) -->
+        <!-- Overlay для свайпов всегда поверх видео -->
         <div id="mobileSwipeOverlay" aria-hidden="true"></div>
         <!-- Loading State -->
         <div id="loadingState" class="loading-state hidden">
@@ -1032,7 +1032,7 @@
         overlay.style.display = 'block';
         overlay.style.pointerEvents = 'auto';
         overlay.style.background = 'transparent';
-        overlay.style.zIndex = 1500;
+        overlay.style.zIndex = 9999;
         
         // Setup Hammer.js for overlay
         if (!overlay._hammer) {
