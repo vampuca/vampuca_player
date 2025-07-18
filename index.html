@@ -445,11 +445,23 @@
             }
 
             .dropdown-menu {
-                width: 10rem;
-                right: -1rem;
+                width: 8rem;
+                right: -0.5rem;
                 left: auto;
-                max-height: 50vh;
+                max-height: 40vh;
                 overflow-y: auto;
+                font-size: 0.8rem;
+            }
+
+            .dropdown-header {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.75rem;
+            }
+
+            .chapter-item {
+                padding: 0.375rem 0.5rem;
+                font-size: 0.75rem;
+                min-height: 36px;
             }
 
 
@@ -534,13 +546,13 @@
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            width: 45px;
-            height: 45px;
-            background: rgba(255, 255, 255, 0.9);
-            border: 2px solid hsl(14,100%,60%);
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
-            color: #333;
-            font-size: 18px;
+            color: white;
+            font-size: 16px;
             cursor: pointer;
             transition: all 0.3s ease;
             pointer-events: auto;
@@ -548,14 +560,16 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
             z-index: 1000;
+            backdrop-filter: blur(8px);
         }
 
         .nav-arrow:hover {
-            background: hsl(14,100%,60%);
+            background: rgba(255, 133, 51, 0.8);
             color: white;
             transform: translateY(-50%) scale(1.1);
+            border-color: hsl(14,100%,60%);
         }
 
         .nav-arrow:active {
@@ -563,11 +577,11 @@
         }
 
         .nav-arrow.left {
-            left: 20px;
+            left: 15px;
         }
 
         .nav-arrow.right {
-            right: 20px;
+            right: 15px;
         }
 
         /* MOBILE FULLSCREEN: Show navigation arrows like slides */
@@ -695,6 +709,8 @@
             <video id="mainVideo" class="main-video" preload="none" playsinline webkit-playsinline muted></video>
             <!-- Mobile swipe overlay (only on mobile, always below controls) -->
             <div id="mobileSwipeOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:1000;background:transparent;display:none;"></div>
+            <!-- Fullscreen swipe overlay for mobile -->
+            <div id="fullscreenSwipeOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:999;background:transparent;display:none;pointer-events:none;"></div>
             <!-- Loading State -->
             <div id="loadingState" class="loading-state hidden">
                 <div>
@@ -816,6 +832,9 @@
         const mutedIcon = document.getElementById('mutedIcon');
         const volumeSlider = document.getElementById('volumeSlider');
         const overlay = document.getElementById('mobileSwipeOverlay');
+        const fullscreenOverlay = document.getElementById('fullscreenSwipeOverlay');
+        const prevArrow = document.getElementById('prevArrow');
+        const nextArrow = document.getElementById('nextArrow');
         // --- State ---
         let currentSlide = 0;
         let isPlaying = false;
@@ -824,32 +843,77 @@
         let controlsTimeout;
         // --- Overlay and Hammer.js swipe logic ---
         function enableMobileSwipe() {
+            console.log('enableMobileSwipe called, isReallyMobile:', isReallyMobile());
+            
             if (!isReallyMobile()) {
+                console.log('Desktop detected - disabling overlays');
                 overlay.style.display = 'none';
                 overlay.style.pointerEvents = 'none';
+                fullscreenOverlay.style.display = 'none';
+                fullscreenOverlay.style.pointerEvents = 'none';
                 // Remove Hammer.js handlers if any
                 if (overlay._hammer) {
                     overlay._hammer.destroy();
                     overlay._hammer = null;
                 }
+                if (fullscreenOverlay._hammer) {
+                    fullscreenOverlay._hammer.destroy();
+                    fullscreenOverlay._hammer = null;
+                }
                 return;
             }
+            
+            console.log('Mobile detected - enabling overlays and swipe');
+            
+            // Regular mobile overlay
             overlay.style.display = 'block';
             overlay.style.pointerEvents = 'auto';
             overlay.style.background = 'transparent';
             overlay.style.zIndex = 1000;
+            
+            // Fullscreen overlay for mobile
+            fullscreenOverlay.style.display = 'block';
+            fullscreenOverlay.style.pointerEvents = 'auto';
+            fullscreenOverlay.style.background = 'transparent';
+            fullscreenOverlay.style.zIndex = 999;
+            
+            // Setup Hammer.js for regular overlay
             if (!overlay._hammer) {
+                console.log('Setting up Hammer.js for regular overlay');
                 var hammer = new Hammer(overlay);
                 overlay._hammer = hammer;
-                hammer.on('swipeleft', function() { goToNext(); });
-                hammer.on('swiperight', function() { goToPrevious(); });
+                hammer.on('swipeleft', function() { 
+                    console.log('Swipe left detected on regular overlay');
+                    goToNext(); 
+                });
+                hammer.on('swiperight', function() { 
+                    console.log('Swipe right detected on regular overlay');
+                    goToPrevious(); 
+                });
             }
+            
+            // Setup Hammer.js for fullscreen overlay
+            if (!fullscreenOverlay._hammer) {
+                console.log('Setting up Hammer.js for fullscreen overlay');
+                var fullscreenHammer = new Hammer(fullscreenOverlay);
+                fullscreenOverlay._hammer = fullscreenHammer;
+                fullscreenHammer.on('swipeleft', function() { 
+                    console.log('Swipe left detected on fullscreen overlay');
+                    goToNext(); 
+                });
+                fullscreenHammer.on('swiperight', function() { 
+                    console.log('Swipe right detected on fullscreen overlay');
+                    goToPrevious(); 
+                });
+            }
+            
             // Prevent native fullscreen on mobile
             mainVideo.addEventListener('webkitbeginfullscreen', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 return false;
             });
+            
             // Prevent long-press download/save on video
             mainVideo.addEventListener('contextmenu', function(e) {
                 e.preventDefault();
