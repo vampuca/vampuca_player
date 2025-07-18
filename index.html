@@ -1438,5 +1438,25 @@
         document.body.style.overflow = '';
         console.log('[DEBUG] iOS Safari: pseudo-fullscreen disabled');
     }
+
+    function setPseudoFullscreen(enable) {
+      if (enable) {
+        playerContainer.classList.add('pseudo-fullscreen');
+        document.body.style.overflow = 'hidden';
+      } else {
+        playerContainer.classList.remove('pseudo-fullscreen');
+        document.body.style.overflow = '';
+      }
+    }
+    function handleOrientationChange() {
+      if (!isReallyMobile()) return;
+      if (window.innerWidth > window.innerHeight) {
+        setPseudoFullscreen(true);
+      } else {
+        setPseudoFullscreen(false);
+      }
+    }
+    window.addEventListener('orientationchange', handleOrientationChange);
+    window.addEventListener('resize', handleOrientationChange);
 </script>
 </body> </html>
