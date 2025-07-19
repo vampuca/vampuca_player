@@ -1046,8 +1046,12 @@
         }
     }
     
-    // --- Load video via Blob URL to "hide" from browser (только для мобильных) ---
+    // --- Load video via Blob URL to "hide" from browser ---
     async function loadVideoBlob(src) {
+        // Показываем спиннер
+        loadingState.classList.remove('hidden');
+        loadingText.textContent = `Loading video...`;
+        
         try {
             // Запрашиваем файл
             const resp = await fetch(src);
@@ -1082,6 +1086,7 @@
             });
         } catch (error) {
             console.error('Error loading video via Blob:', error);
+            loadingState.classList.add('hidden');
             throw error;
         }
     }
@@ -1091,56 +1096,24 @@
         if (index < 0 || index >= videoSources.length) return;
         currentSlide = index;
         isPlaying = false;
-        loadingState.classList.remove('hidden');
-        const chapterTitle = videoSources[index].title;
-        loadingText.textContent = `Loading ${chapterTitle}...`;
         mainVideo.pause();
         
+        // Загружаем видео через Blob URL
         const videoSrc = videoSources[index].src;
-        
-        // Используем Blob URL только на мобильных устройствах
-        if (isReallyMobile()) {
-            try {
-                await loadVideoBlob(videoSrc);
-                if (autoplay) {
-                    mainVideo.play().catch(()=>{});
-                    isPlaying = true;
-                    updatePlayButton();
-                }
-            } catch (error) {
-                console.error('Failed to load video via Blob, falling back to normal:', error);
-                // Fallback к обычной загрузке в случае ошибки
-                mainVideo.src = videoSrc;
-                mainVideo.load();
-                mainVideo.currentTime = 0;
-                mainVideo.muted = isMuted;
-                mainVideo.addEventListener('loadeddata', function onLoaded() {
-                    mainVideo.removeEventListener('loadeddata', onLoaded);
-                    loadingState.classList.add('hidden');
-                    if (autoplay) {
-                        mainVideo.play().catch(()=>{});
-                        isPlaying = true;
-                        updatePlayButton();
-                    }
-                });
+        try {
+            await loadVideoBlob(videoSrc);
+            if (autoplay) {
+                mainVideo.play().catch(()=>{});
+                isPlaying = true;
+                updatePlayButton();
             }
-        } else {
-            // На десктопе используем обычную загрузку
-            if (mainVideo.src !== videoSrc) {
-                mainVideo.src = videoSrc;
-                mainVideo.load();
-            }
+        } catch (error) {
+            console.error('Failed to load video:', error);
+            // Fallback к обычной загрузке в случае ошибки
+            mainVideo.src = videoSrc;
+            mainVideo.load();
             mainVideo.currentTime = 0;
             mainVideo.muted = isMuted;
-            mainVideo.addEventListener('loadeddata', function onLoaded() {
-                mainVideo.removeEventListener('loadeddata', onLoaded);
-                loadingState.classList.add('hidden');
-                if (autoplay) {
-                    mainVideo.play().catch(()=>{});
-                    isPlaying = true;
-                    updatePlayButton();
-                }
-            });
         }
         
         updateSlideCounter();
