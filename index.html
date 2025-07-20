@@ -3,1056 +3,710 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vampuca AI Player</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: black;
-            color: white;
-            overflow: hidden;
-            user-select: none;
-        }
-
-        .player-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            background: black;
-        }
-
-        .studio-branding {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            z-index: 1001;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .studio-brand-block {
-            background: rgba(0,0,0,0.7);
-            padding: 0.5rem 0.75rem;
-            border-radius: 0.5rem;
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,133,51,0.2);
-        }
-
-        .dropdown-button-container {
-            background: rgba(0,0,0,0.7);
-            padding: 0.5rem;
-            border-radius: 0.5rem;
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,133,51,0.2);
-            position: relative;
-            z-index: 1001;
-        }
-
-        .studio-name {
-            color: hsl(14,100%,60%);
-            font-weight: 700;
-            font-size: 1.125rem;
-            letter-spacing: 0.05em;
-            text-shadow: 0 0 10px rgba(255,133,51,0.3);
-        }
-
-        .dropdown-button {
-            background: none;
-            border: none;
-            color: hsl(14,100%,60%);
-            cursor: pointer;
-            padding: 0.25rem;
-            border-radius: 0.25rem;
-            transition: all 0.2s ease;
-        }
-
-        .dropdown-button:hover {
-            color: white;
-            background: rgba(255,133,51,0.1);
-        }
-
-        .dropdown-menu {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            margin-top: 0.5rem;
-            width: 12rem;
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(16px);
-            border-radius: 0.5rem;
-            border: 1px solid rgba(0,0,0,0.1);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            max-height: 60vh;
-            overflow-y: auto;
-            z-index: 1002;
-            display: none;
-            opacity: 0;
-            transform: translateY(-10px);
-            transition: all 0.3s ease;
-        }
-
-        .dropdown-menu.visible {
-            display: block !important;
-            opacity: 1 !important;
-            transform: translateY(0) !important;
-        }
-
-        .dropdown-menu::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .dropdown-menu::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.1);
-            border-radius: 3px;
-        }
-
-        .dropdown-menu::-webkit-scrollbar-thumb {
-            background: rgba(255,133,51,0.6);
-            border-radius: 3px;
-        }
-
-        .dropdown-menu::-webkit-scrollbar-thumb:hover {
-            background: rgba(255,133,51,0.8);
-        }
-
-        .dropdown-header {
-            padding: 0.75rem 1rem;
-            border-bottom: 1px solid rgba(0,0,0,0.1);
-            color: hsl(14,100%,60%);
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-
-        .chapter-list {
-            padding: 0.5rem;
-        }
-
-        .chapter-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-            padding: 0.5rem 0.75rem;
-            border: none;
-            background: none;
-            color: #374151;
-            cursor: pointer;
-            border-radius: 0.375rem;
-            transition: all 0.2s ease;
-            font-size: 0.875rem;
-            text-align: left;
-        }
-
-        @media (max-width: 768px) {
-            .chapter-item {
-                min-height: 48px;
-                padding: 1rem 1.25rem;
-                font-size: 1.1rem;
-            }
-        }
-
-        .chapter-item:hover {
-            background: rgba(255,133,51,0.1);
-            color: hsl(14,100%,60%);
-        }
-
-        .chapter-item.active {
-            background: rgba(255,133,51,0.2);
-            color: hsl(14,100%,60%);
-        }
-
-        .chapter-indicator {
-            opacity: 0.5;
-            font-size: 1.2em;
-            margin-left: auto;
-        }
-
-        .video-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-        }
-
-        .main-video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        .slide-counter {
-            position: absolute;
-            top: 1rem;
-            left: 1rem;
-            z-index: 50;
-            background: rgba(0,0,0,0.7);
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            backdrop-filter: blur(12px);
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-
-        .controls-container {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 50%, transparent 100%);
-            padding: 4rem 1rem 1rem;
-            transition: all 0.3s ease;
-            z-index: 100;
-        }
-
-        .controls-container.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .controls-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-        }
-
-        .controls-left, .controls-right {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .control-btn {
-            background: rgba(0,0,0,0.7);
-            border: none;
-            color: white;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .control-btn:hover {
-            background: rgba(255,133,51,0.2);
-            border-color: rgba(255,133,51,0.3);
-        }
-
-        .control-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .control-btn svg {
-            width: 1.25rem;
-            height: 1.25rem;
-        }
-
-        .volume-control {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: rgba(0,0,0,0.7);
-            padding: 0.5rem 0.75rem;
-            border-radius: 0.5rem;
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .volume-slider {
-            width: 80px;
-            height: 4px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 2px;
-            outline: none;
-            -webkit-appearance: none;
-        }
-
-        .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
-            background: hsl(14,100%,60%);
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
-        .volume-slider::-moz-range-thumb {
-            width: 16px;
-            height: 16px;
-            background: hsl(14,100%,60%);
-            border-radius: 50%;
-            cursor: pointer;
-            border: none;
-        }
-
-        .navigation-arrows {
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            transform: translateY(-50%);
-            display: flex;
-            justify-content: space-between;
-            padding: 0 1rem;
-            pointer-events: none;
-            z-index: 999;
-        }
-
-        .nav-arrow {
-            background: rgba(0,0,0,0.7);
-            border: none;
-            color: white;
-            padding: 1rem;
-            border-radius: 50%;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,255,255,0.1);
-            pointer-events: auto;
-        }
-
-        .nav-arrow:hover {
-            background: rgba(255,133,51,0.2);
-            border-color: rgba(255,133,51,0.3);
-        }
-
-        .nav-arrow:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .nav-arrow svg {
-            width: 1.5rem;
-            height: 1.5rem;
-        }
-
-        .loading-state {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.8);
-            padding: 2rem;
-            border-radius: 1rem;
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255,255,255,0.1);
-            z-index: 1000;
-            text-align: center;
-        }
-
-        .loading-state.hidden {
-            display: none;
-        }
-
-        .loading-spinner {
-            width: 2rem;
-            height: 2rem;
-            border: 3px solid rgba(255,255,255,0.2);
-            border-top: 3px solid hsl(14,100%,60%);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .loading-text {
-            color: white;
-            font-size: 0.875rem;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        /* Mobile-specific styles */
-        @media (max-width: 768px) {
-            .main-video {
-                pointer-events: none !important;
-            }
-            
-            .player-container:fullscreen .main-video,
-            .player-container:-webkit-full-screen .main-video {
-                pointer-events: none !important;
-            }
-            
-            #mobileSwipeOverlay {
-                display: block !important;
-                pointer-events: auto !important;
-                touch-action: none !important;
-                position: absolute; 
-                top: 0; 
-                left: 0; 
-                width: 100%; 
-                height: 100%; 
-                z-index: 1500;
-                background: transparent;
-            }
-            
-            .mobile-fullscreen-arrows, 
-            .mobile-mute-btn { 
-                display: block !important; 
-            }
-        }
-
-        @media (min-width: 769px) {
-            .navigation-arrows {
-                display: none !important;
-            }
-        }
-
-        /* Mobile fullscreen controls */
-        .mobile-fullscreen-arrows {
-            position: fixed;
-            top: 50%;
-            left: 0;
-            right: 0;
-            transform: translateY(-50%);
-            display: flex !important;
-            justify-content: space-between;
-            padding: 0 1rem;
-            z-index: 2000;
-            pointer-events: auto !important;
-        }
-
-        .mobile-fullscreen-arrows .nav-arrow {
-            pointer-events: auto !important;
-        }
-
-        @media (max-width: 768px) {
-            .mobile-fullscreen-arrows {
-                display: flex !important;
-                pointer-events: auto !important;
-            }
-        }
-
-        .mobile-mute-btn {
-            position: fixed;
-            top: 1rem;
-            left: 1rem;
-            background: rgba(0,0,0,0.7);
-            border: none;
-            color: white;
-            padding: 0.75rem;
-            border-radius: 50%;
-            cursor: pointer;
-            z-index: 2001;
-            display: none;
-        }
-
-        .mobile-mute-btn svg {
-            width: 22px;
-            height: 22px;
-        }
-    </style>
+    <title>Vampuca AI</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="player-container" id="playerContainer">
         <!-- Studio Branding -->
         <div class="studio-branding">
             <div class="studio-brand-block">
-                <span class="studio-name">VAMPUCA AI</span>
+                <div class="studio-name">VAMPUCA AI</div>
             </div>
             <div class="dropdown-button-container">
-                <button class="dropdown-button" id="dropdownButton">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M6 9l6 6 6-6"/>
-                    </svg>
+                <button class="dropdown-button" id="dropdownButton" aria-label="Chapter navigation">
+                    <i class="fas fa-bars"></i>
                 </button>
                 <div class="dropdown-menu" id="dropdownMenu">
                     <div class="dropdown-header">Chapters</div>
                     <div class="chapter-list" id="chapterList">
-                        <!-- Chapters will be generated here -->
+                        <!-- Chapter items will be populated by JavaScript -->
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Slide Counter -->
-        <div class="slide-counter" id="slideCounter">Title / 22</div>
+        <div class="slide-counter" id="slideCounter">
+            1 / 22
+        </div>
 
         <!-- Video Container -->
-        <div class="video-container" id="videoContainer" style="position:relative;">
-            <div id="staticSlideOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;background:black;display:none;z-index:900;justify-content:center;align-items:center;color:#fff;font-size:2rem;text-align:center;"></div>
-            <video id="mainVideo" class="main-video" preload="none" playsinline webkit-playsinline muted></video>
-            <!-- Mobile swipe overlay (универсальный для всех свайпов) -->
-            <div id="mobileSwipeOverlay" aria-hidden="true"></div>
-            <!-- Loading State -->
-            <div class="loading-state" id="loadingState">
+        <div class="video-container" id="videoContainer">
+            <video 
+                class="main-video" 
+                id="mainVideo"
+                playsinline
+                preload="metadata"
+                disablePictureInPicture
+                controlslist="nodownload nofullscreen noremoteplayback"
+                webkit-playsinline="true"
+                x5-playsinline="true"
+                x5-video-player-type="h5"
+                x5-video-player-fullscreen="true"
+                x5-video-orientation="portraint"
+            >
+                <source src="" type="video/mp4">
+                <source src="" type="video/x-m4v">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+
+        <!-- Loading State -->
+        <div class="loading-state hidden" id="loadingState">
+            <div>
                 <div class="loading-spinner"></div>
-                <div class="loading-text" id="loadingText">Loading...</div>
+                <div class="loading-text">Loading video...</div>
             </div>
         </div>
 
-        <!-- Navigation Arrows (Desktop) -->
-        <div class="navigation-arrows">
-            <button class="nav-arrow" id="prevBtn" disabled>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M15 18l-6-6 6-6"/>
-                </svg>
-            </button>
-            <button class="nav-arrow" id="nextBtn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 18l6-6-6-6"/>
-                </svg>
-            </button>
-        </div>
-
-        <!-- Mobile Fullscreen Arrows -->
-        <div class="mobile-fullscreen-arrows">
-            <button class="nav-arrow" id="mobilePrevArrow" disabled>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M15 18l-6-6 6-6"/>
-                </svg>
-            </button>
-            <button class="nav-arrow" id="mobileNextArrow">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 18l6-6-6-6"/>
-                </svg>
-            </button>
-        </div>
-
-        <!-- Mobile Mute Button -->
-        <button class="mobile-mute-btn" id="mobileMuteBtn">
-            <svg id="mobileMuteIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
-                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
-            </svg>
-            <svg id="mobileMutedIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
-                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
-                <line x1="23" y1="9" x2="17" y2="15"/>
-                <line x1="17" y1="9" x2="23" y2="15"/>
-            </svg>
-        </button>
-
-        <!-- Controls -->
+        <!-- Controls Container -->
         <div class="controls-container" id="controlsContainer">
-            <div class="controls-row">
+            <div class="controls-panel">
                 <div class="controls-left">
-                    <button class="control-btn" id="playBtn">
-                        <svg id="playIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polygon points="5,3 19,12 5,21"/>
-                        </svg>
-                        <svg id="pauseIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hidden">
-                            <rect x="6" y="4" width="4" height="16"/>
-                            <rect x="14" y="4" width="4" height="16"/>
-                        </svg>
+                    <button class="control-button" id="prevButton" aria-label="Previous slide">
+                        <i class="fas fa-chevron-left"></i>
                     </button>
-                    <div class="volume-control">
-                        <button class="control-btn" id="muteBtn">
-                            <svg id="muteIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
-                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                            </svg>
-                            <svg id="mutedIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hidden">
-                                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
-                                <line x1="23" y1="9" x2="17" y2="15"/>
-                                <line x1="17" y1="9" x2="23" y2="15"/>
-                            </svg>
-                        </button>
-                        <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="100">
-                    </div>
+                    <button class="control-button play-button" id="playButton" aria-label="Play/Pause">
+                        <i class="fas fa-play" id="playIcon"></i>
+                    </button>
+                    <button class="control-button" id="nextButton" aria-label="Next slide">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
                 </div>
+                
                 <div class="controls-right">
-                    <button class="control-btn" id="fullscreenBtn">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="15,3 21,3 21,9"/>
-                            <polyline points="9,21 3,21 3,15"/>
-                            <line x1="21" y1="3" x2="14" y2="10"/>
-                            <line x1="3" y1="21" x2="10" y2="14"/>
-                        </svg>
+                    <div class="volume-control">
+                        <button class="volume-button" id="volumeButton" aria-label="Mute/Unmute">
+                            <i class="fas fa-volume-up" id="volumeIcon"></i>
+                        </button>
+                        <input 
+                            type="range" 
+                            class="volume-slider" 
+                            id="volumeSlider" 
+                            min="0" 
+                            max="100" 
+                            value="50"
+                            aria-label="Volume control"
+                        >
+                    </div>
+                    <button class="fullscreen-button" id="fullscreenButton" aria-label="Toggle fullscreen">
+                        <i class="fas fa-expand" id="fullscreenIcon"></i>
                     </button>
                 </div>
             </div>
         </div>
+
+        <!-- Touch overlay for swipe detection -->
+        <div class="touch-overlay" id="touchOverlay"></div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <script>
-        // --- Video Sources ---
-        const videoSources = [
-            { src: 'KLKT_TITLE.m4v', title: 'Title' },
-            { src: 'KLKT_1.m4v', title: 'Chapter 1' },
-            { src: 'KLKT_2.m4v', title: 'Chapter 2' },
-            { src: 'KLKT_3.m4v', title: 'Chapter 3' },
-            { src: 'KLKT_4.m4v', title: 'Chapter 4' },
-            { src: 'KLKT_5.m4v', title: 'Chapter 5' },
-            { src: 'KLKT_6.m4v', title: 'Chapter 6' },
-            { src: 'KLKT_7.m4v', title: 'Chapter 7' },
-            { src: 'KLKT_8.m4v', title: 'Chapter 8' },
-            { src: 'KLKT_9.m4v', title: 'Chapter 9' },
-            { src: 'KLKT_10.m4v', title: 'Chapter 10' },
-            { src: 'KLKT_11.m4v', title: 'Chapter 11' },
-            { src: 'KLKT_12.m4v', title: 'Chapter 12' },
-            { src: 'KLKT_13.m4v', title: 'Chapter 13' },
-            { src: 'KLKT_14.m4v', title: 'Chapter 14' },
-            { src: 'KLKT_15.m4v', title: 'Chapter 15' },
-            { src: 'KLKT_16.m4v', title: 'Chapter 16' },
-            { src: 'KLKT_17.m4v', title: 'Chapter 17' },
-            { src: 'KLKT_18.m4v', title: 'Chapter 18' },
-            { src: 'KLKT_19.m4v', title: 'Chapter 19' },
-            { src: 'KLKT_20.m4v', title: 'Chapter 20' },
-            { src: 'KLKT_END.m4v', title: 'End' }
-        ];
+class VideoPlayer {
+    constructor() {
+        this.currentSlide = 0;
+        // Generate slides dynamically from GitHub repository
+        this.slides = this.generateSlidesList();
+        
+        this.isPlaying = false;
+        this.isFullscreen = false;
+        this.isMuted = false; // Изменил на false, чтобы звук был включен
+        this.volume = 0.5;
+        this.controlsVisible = true;
+        this.controlsTimeout = null;
+        
+        // Touch handling
+        this.touchStartX = 0;
+        this.touchStartY = 0;
+        this.touchThreshold = 50;
+        this.isTouch = false;
+        
+        this.initializeElements();
+        this.setupEventListeners();
+        this.loadSlide(this.currentSlide);
+        this.generateChapters();
+        this.updateNavigationButtons();
+        this.hideControlsAfterDelay();
+    }
 
-        // --- DOM Elements ---
-        const playerContainer = document.getElementById('playerContainer');
-        const mainVideo = document.getElementById('mainVideo');
-        const videoContainer = document.getElementById('videoContainer');
-        const loadingState = document.getElementById('loadingState');
-        const loadingText = document.getElementById('loadingText');
-        const slideCounter = document.getElementById('slideCounter');
-        const controlsContainer = document.getElementById('controlsContainer');
-        const playBtn = document.getElementById('playBtn');
-        const muteBtn = document.getElementById('muteBtn');
-        const fullscreenBtn = document.getElementById('fullscreenBtn');
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
-        const volumeSlider = document.getElementById('volumeSlider');
-        const dropdownButton = document.getElementById('dropdownButton');
-        const dropdownMenu = document.getElementById('dropdownMenu');
-        const chapterList = document.getElementById('chapterList');
-        const playIcon = document.getElementById('playIcon');
-        const pauseIcon = document.getElementById('pauseIcon');
-        const muteIcon = document.getElementById('muteIcon');
-        const mutedIcon = document.getElementById('mutedIcon');
-        const overlay = document.getElementById('mobileSwipeOverlay');
-        const mobilePrevArrow = document.getElementById('mobilePrevArrow');
-        const mobileNextArrow = document.getElementById('mobileNextArrow');
-
-        // --- State ---
-        let currentSlide = 0;
-        let isPlaying = false;
-        let isMuted = false; // Sound ON by default
-        let showDropdown = false;
-        let controlsTimeout;
-        let currentBlobURL = null; // Для хранения текущего Blob URL
-
-        // --- Touch handling state ---
-        let touchStart = { x: 0, y: 0 };
-        let touchEnd = { x: 0, y: 0 };
-
-        // --- Mobile Detection ---
-        function isReallyMobile() {
-            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                   (typeof window.orientation !== 'undefined') || 
-                   window.innerWidth <= 800;
-        }
-
-        // --- Simple touch handling ---
-        function handleTouchStart(e) {
-            if (!isReallyMobile()) return;
-            touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-            console.log('Touch start:', touchStart);
-            e.preventDefault();
-        }
-
-        function handleTouchMove(e) {
-            if (!isReallyMobile()) return;
-            e.preventDefault();
-        }
-
-        let swipeNavSuppressed = false;
-
-        async function handleTouchEnd(e) {
-            if (!isReallyMobile()) return;
-            if (swipeNavSuppressed) {
-                swipeNavSuppressed = false;
-                return;
-            }
-            touchEnd = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
-            const deltaX = touchEnd.x - touchStart.x;
-            console.log('Touch end, deltaX:', deltaX);
-
-            if (Math.abs(deltaX) > 50) {
-                if (deltaX > 0) {
-                    console.log('Swipe right detected via touch');
-                    await goToPrevious();
-                } else {
-                    console.log('Swipe left detected via touch');
-                    await goToNext();
-                }
-            }
-            e.preventDefault();
-        }
-
-        // --- Overlay and Hammer.js swipe logic ---
-        function enableMobileSwipe() {
-            const isMobile = isReallyMobile();
-            if (!isMobile) {
-                // DESKTOP: overlay never shown, never blocks controls
-                overlay.style.display = 'none';
-                overlay.style.pointerEvents = 'none';
-                videoContainer.removeEventListener('touchstart', handleTouchStart);
-                videoContainer.removeEventListener('touchmove', handleTouchMove);
-                videoContainer.removeEventListener('touchend', handleTouchEnd);
-                if (overlay._hammer) {
-                    overlay._hammer.destroy();
-                    overlay._hammer = null;
-                }
-                return;
-            }
-            // MOBILE: overlay always active for swipe, never blocks custom controls
-            overlay.style.display = 'block';
-            overlay.style.pointerEvents = 'auto';
-            overlay.style.background = 'transparent';
-            overlay.style.zIndex = 1000;
-            videoContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
-            videoContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
-            videoContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
-            if (!overlay._hammer) {
-                var hammer = new Hammer(overlay);
-                overlay._hammer = hammer;
-                hammer.on('swipeleft', async function() {
-                    swipeNavSuppressed = true;
-                    await goToNext();
-                });
-                hammer.on('swiperight', async function() {
-                    swipeNavSuppressed = true;
-                    await goToPrevious();
-                });
-            }
-            // Suppress context menu on video (long-press)
-            mainVideo.addEventListener('contextmenu', function(e) {
-                e.preventDefault();
-                return false;
+    generateSlidesList() {
+        const baseUrl = "https://raw.githubusercontent.com/vampuca/vampuca_player/main/";
+        const slides = [];
+        
+        // Title slide (только стрелка вперед)
+        slides.push({
+            title: "Title",
+            videoUrl: baseUrl + "KLKT_TITLE.m4v",
+            chapter: 1,
+            type: "title"
+        });
+        
+        // Main content slides (обычная навигация)
+        for (let i = 1; i <= 20; i++) {
+            slides.push({
+                title: `KLKT ${i}`,
+                videoUrl: baseUrl + `KLKT_${i}.m4v`,
+                chapter: Math.ceil(i / 5), // Группируем по 5 слайдов в главу
+                type: "content"
             });
         }
+        
+        // End slide (только play и назад)
+        slides.push({
+            title: "End",
+            videoUrl: baseUrl + "KLKT_END.m4v",
+            chapter: 5,
+            type: "end"
+        });
+        
+        console.log('Generated slides:', slides);
+        return slides;
+    }
 
-        // Update overlay state on resize/orientation change
-        window.addEventListener('resize', enableMobileSwipe);
-        window.addEventListener('orientationchange', enableMobileSwipe);
+    initializeElements() {
+        this.playerContainer = document.getElementById('playerContainer');
+        this.mainVideo = document.getElementById('mainVideo');
+        this.playButton = document.getElementById('playButton');
+        this.playIcon = document.getElementById('playIcon');
+        this.prevButton = document.getElementById('prevButton');
+        this.nextButton = document.getElementById('nextButton');
+        this.volumeButton = document.getElementById('volumeButton');
+        this.volumeIcon = document.getElementById('volumeIcon');
+        this.volumeSlider = document.getElementById('volumeSlider');
+        this.fullscreenButton = document.getElementById('fullscreenButton');
+        this.fullscreenIcon = document.getElementById('fullscreenIcon');
+        this.slideCounter = document.getElementById('slideCounter');
+        this.controlsContainer = document.getElementById('controlsContainer');
+        this.loadingState = document.getElementById('loadingState');
+        this.dropdownButton = document.getElementById('dropdownButton');
+        this.dropdownMenu = document.getElementById('dropdownMenu');
+        this.chapterList = document.getElementById('chapterList');
+        this.touchOverlay = document.getElementById('touchOverlay');
+        this.videoContainer = document.getElementById('videoContainer');
+    }
 
-        // Fullscreen change handlers
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+    setupEventListeners() {
+        // Video events
+        this.mainVideo.addEventListener('loadstart', () => this.showLoading());
+        this.mainVideo.addEventListener('loadeddata', () => this.hideLoading());
+        this.mainVideo.addEventListener('canplay', () => this.hideLoading());
+        this.mainVideo.addEventListener('waiting', () => this.showLoading());
+        this.mainVideo.addEventListener('playing', () => this.hideLoading());
+        this.mainVideo.addEventListener('ended', () => this.nextSlide());
+        
+        // Prevent any native video controls
+        this.mainVideo.addEventListener('contextmenu', (e) => e.preventDefault());
+        this.mainVideo.addEventListener('click', (e) => e.preventDefault());
+        this.mainVideo.addEventListener('dblclick', (e) => e.preventDefault());
+        
+        // Control buttons
+        this.playButton.addEventListener('click', () => this.togglePlay());
+        this.prevButton.addEventListener('click', () => this.prevSlide());
+        this.nextButton.addEventListener('click', () => this.nextSlide());
+        this.volumeButton.addEventListener('click', () => this.toggleMute());
+        this.volumeSlider.addEventListener('input', (e) => this.setVolume(e.target.value / 100));
+        this.fullscreenButton.addEventListener('click', () => this.toggleFullscreen());
+        
+        // Dropdown
+        this.dropdownButton.addEventListener('click', () => this.toggleDropdown());
+        document.addEventListener('click', (e) => this.handleOutsideClick(e));
+        
+        // Touch events for swipe navigation
+        this.setupTouchEvents();
+        
+        // Keyboard events
+        document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+        
+        // Fullscreen events
+        document.addEventListener('fullscreenchange', () => this.handleFullscreenChange());
+        document.addEventListener('webkitfullscreenchange', () => this.handleFullscreenChange());
+        document.addEventListener('mozfullscreenchange', () => this.handleFullscreenChange());
+        
+        // Mouse movement for controls
+        this.playerContainer.addEventListener('mousemove', () => this.showControlsTemporarily());
+        this.playerContainer.addEventListener('mouseleave', () => this.hideControlsAfterDelay());
+        
+        // Video container click for play/pause
+        this.videoContainer.addEventListener('click', () => this.togglePlay());
+        
+        // Prevent video from receiving any pointer events
+        this.mainVideo.style.pointerEvents = 'none';
+    }
 
-        function handleFullscreenChange() {
-            console.log('Fullscreen change detected');
-            const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
-            console.log('Is fullscreen:', isFullscreen);
-
-            if (isReallyMobile()) {
-                if (isFullscreen) {
-                    console.log('Mobile fullscreen entered - enabling fullscreen overlay');
-                } else {
-                    console.log('Mobile fullscreen exited - enabling regular overlay');
-                }
+    setupTouchEvents() {
+        // Touch events on the touch overlay
+        this.touchOverlay.addEventListener('touchstart', (e) => {
+            this.handleTouchStart(e);
+        }, { passive: false });
+        
+        this.touchOverlay.addEventListener('touchmove', (e) => {
+            e.preventDefault(); // Prevent scrolling
+        }, { passive: false });
+        
+        this.touchOverlay.addEventListener('touchend', (e) => {
+            this.handleTouchEnd(e);
+        }, { passive: false });
+        
+        // Also handle touch on video container
+        this.videoContainer.addEventListener('touchstart', (e) => {
+            this.handleTouchStart(e);
+        }, { passive: false });
+        
+        this.videoContainer.addEventListener('touchend', (e) => {
+            this.handleTouchEnd(e);
+        }, { passive: false });
+        
+        // Prevent default touch behaviors
+        document.addEventListener('touchstart', (e) => {
+            if (e.target.closest('.player-container') && !e.target.closest('.controls-container')) {
+                e.preventDefault();
             }
+        }, { passive: false });
+        
+        document.addEventListener('touchmove', (e) => {
+            if (e.target.closest('.player-container') && !e.target.closest('.controls-container')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    }
+
+    handleTouchStart(e) {
+        if (e.target.closest('.controls-container')) return;
+        
+        this.isTouch = true;
+        const touch = e.touches[0];
+        this.touchStartX = touch.clientX;
+        this.touchStartY = touch.clientY;
+        
+        // Show controls on touch
+        this.showControlsTemporarily();
+        
+        e.preventDefault();
+    }
+
+    handleTouchEnd(e) {
+        if (!this.isTouch || e.target.closest('.controls-container')) return;
+        
+        const touch = e.changedTouches[0];
+        const touchEndX = touch.clientX;
+        const touchEndY = touch.clientY;
+        
+        const deltaX = touchEndX - this.touchStartX;
+        const deltaY = touchEndY - this.touchStartY;
+        
+        // Check if it's a swipe (horizontal movement > vertical movement)
+        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > this.touchThreshold) {
+            if (deltaX > 0) {
+                // Swipe right - previous slide
+                this.prevSlide();
+            } else {
+                // Swipe left - next slide
+                this.nextSlide();
+            }
+        } else if (Math.abs(deltaX) < 20 && Math.abs(deltaY) < 20) {
+            // Tap - toggle play/pause
+            this.togglePlay();
         }
+        
+        this.isTouch = false;
+        e.preventDefault();
+    }
 
-        // --- Load video via Blob URL to "hide" from browser ---
-        async function loadVideoBlob(src) {
-            // Показываем спиннер
-            loadingState.classList.remove('hidden');
-            loadingText.textContent = `Loading video...`;
+    handleKeyboard(e) {
+        switch(e.key) {
+            case ' ':
+                e.preventDefault();
+                this.togglePlay();
+                break;
+            case 'ArrowLeft':
+                e.preventDefault();
+                this.prevSlide();
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                this.nextSlide();
+                break;
+            case 'm':
+            case 'M':
+                this.toggleMute();
+                break;
+            case 'f':
+            case 'F':
+                this.toggleFullscreen();
+                break;
+            case 'Escape':
+                if (this.isFullscreen) {
+                    this.exitFullscreen();
+                }
+                break;
+        }
+    }
 
+    showControlsTemporarily() {
+        this.controlsContainer.classList.remove('hidden');
+        this.controlsVisible = true;
+        
+        clearTimeout(this.controlsTimeout);
+        this.hideControlsAfterDelay();
+    }
+
+    hideControlsAfterDelay() {
+        clearTimeout(this.controlsTimeout);
+        this.controlsTimeout = setTimeout(() => {
+            if (!this.playerContainer.matches(':hover') && !this.isTouch) {
+                this.controlsContainer.classList.add('hidden');
+                this.controlsVisible = false;
+            }
+        }, 3000);
+    }
+
+    async loadSlide(index) {
+        if (index < 0 || index >= this.slides.length) return;
+        
+        this.showLoading();
+        this.currentSlide = index;
+        
+        try {
+            // Update video source and sources
+            const videoUrl = this.slides[index].videoUrl;
+            this.mainVideo.src = videoUrl;
+            
+            // Update source elements for better compatibility
+            const sources = this.mainVideo.querySelectorAll('source');
+            sources.forEach(source => {
+                source.src = videoUrl;
+            });
+            
+            // Force video attributes
+            this.mainVideo.muted = this.isMuted;
+            this.mainVideo.volume = this.volume;
+            this.mainVideo.controls = false;
+            this.mainVideo.setAttribute('playsinline', '');
+            this.mainVideo.setAttribute('webkit-playsinline', '');
+            this.mainVideo.setAttribute('x5-playsinline', '');
+            
+            // Wait for video to load
+            await new Promise((resolve, reject) => {
+                const handleLoad = () => {
+                    this.mainVideo.removeEventListener('loadeddata', handleLoad);
+                    this.mainVideo.removeEventListener('error', handleError);
+                    resolve();
+                };
+                
+                const handleError = () => {
+                    this.mainVideo.removeEventListener('loadeddata', handleLoad);
+                    this.mainVideo.removeEventListener('error', handleError);
+                    reject();
+                };
+                
+                this.mainVideo.addEventListener('loadeddata', handleLoad);
+                this.mainVideo.addEventListener('error', handleError);
+                
+                this.mainVideo.load();
+            });
+            
+            this.updateSlideCounter();
+            this.updateChapterActive();
+            this.updateNavigationButtons();
+            this.hideLoading();
+            
+            // Auto play new slide с попыткой включить звук
             try {
-                // Запрашиваем файл
-                const resp = await fetch(src);
-                if (!resp.ok) {
-                    throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+                this.mainVideo.muted = false; // Пытаемся включить звук
+                this.mainVideo.volume = this.volume;
+                this.mainVideo.controls = false;
+                await this.mainVideo.play();
+                this.isPlaying = true;
+                this.playIcon.className = 'fas fa-pause';
+                this.isMuted = false;
+                this.volumeIcon.className = 'fas fa-volume-up';
+            } catch (playError) {
+                // Если не получается со звуком, пробуем без звука
+                try {
+                    this.mainVideo.muted = true;
+                    await this.mainVideo.play();
+                    this.isPlaying = true;
+                    this.playIcon.className = 'fas fa-pause';
+                    this.isMuted = true;
+                    this.volumeIcon.className = 'fas fa-volume-mute';
+                    console.log('Auto-play started muted, user can unmute manually');
+                } catch (mutedPlayError) {
+                    console.log('Auto-play blocked completely, user interaction required');
+                    this.isPlaying = false;
+                    this.playIcon.className = 'fas fa-play';
                 }
-                const data = await resp.arrayBuffer();
+            }
+            
+        } catch (error) {
+            console.error('Error loading video:', error);
+            console.error('Video URL:', this.slides[index].videoUrl);
+            console.error('Video element:', this.mainVideo);
+            this.hideLoading();
+        }
+    }
 
-                // Создаём Blob «безвидеового» типа
-                const blob = new Blob([data], { type: 'application/octet-stream' });
+    async togglePlay() {
+        try {
+            if (this.isPlaying) {
+                this.mainVideo.pause();
+                this.isPlaying = false;
+                this.playIcon.className = 'fas fa-play';
+            } else {
+                // Ensure video attributes are correct before playing
+                this.mainVideo.muted = this.isMuted;
+                this.mainVideo.controls = false;
+                
+                await this.mainVideo.play();
+                this.isPlaying = true;
+                this.playIcon.className = 'fas fa-pause';
+            }
+        } catch (error) {
+            console.error('Error toggling play:', error);
+        }
+    }
 
-                // Освобождаем старый URL, если есть
-                if (currentBlobURL) {
-                    URL.revokeObjectURL(currentBlobURL);
+    prevSlide() {
+        const currentSlide = this.slides[this.currentSlide];
+        
+        // Title slide не может идти назад
+        if (currentSlide.type === "title") return;
+        
+        if (this.currentSlide > 0) {
+            this.loadSlide(this.currentSlide - 1);
+        }
+    }
+
+    nextSlide() {
+        const currentSlide = this.slides[this.currentSlide];
+        
+        // End slide не может идти вперед
+        if (currentSlide.type === "end") return;
+        
+        if (this.currentSlide < this.slides.length - 1) {
+            this.loadSlide(this.currentSlide + 1);
+        }
+    }
+
+    toggleMute() {
+        this.isMuted = !this.isMuted;
+        this.mainVideo.muted = this.isMuted;
+        
+        if (this.isMuted) {
+            this.volumeIcon.className = 'fas fa-volume-mute';
+        } else {
+            this.mainVideo.volume = this.volume;
+            if (this.volume < 0.5) {
+                this.volumeIcon.className = 'fas fa-volume-down';
+            } else {
+                this.volumeIcon.className = 'fas fa-volume-up';
+            }
+        }
+    }
+
+    setVolume(value) {
+        this.volume = value;
+        this.mainVideo.volume = value;
+        
+        if (value === 0) {
+            this.isMuted = true;
+            this.mainVideo.muted = true;
+            this.volumeIcon.className = 'fas fa-volume-mute';
+        } else {
+            this.isMuted = false;
+            this.mainVideo.muted = false;
+            if (value < 0.5) {
+                this.volumeIcon.className = 'fas fa-volume-down';
+            } else {
+                this.volumeIcon.className = 'fas fa-volume-up';
+            }
+        }
+    }
+
+    async toggleFullscreen() {
+        try {
+            if (!this.isFullscreen) {
+                if (this.playerContainer.requestFullscreen) {
+                    await this.playerContainer.requestFullscreen();
+                } else if (this.playerContainer.webkitRequestFullscreen) {
+                    await this.playerContainer.webkitRequestFullscreen();
+                } else if (this.playerContainer.mozRequestFullScreen) {
+                    await this.playerContainer.mozRequestFullScreen();
                 }
-
-                // Генерируем URL и ставим в видео
-                const url = URL.createObjectURL(blob);
-                currentBlobURL = url;
-                mainVideo.src = url;
-                mainVideo.load();
-                mainVideo.currentTime = 0;
-                mainVideo.muted = isMuted;
-
-                // Ждём первого кадра
-                return new Promise((resolve) => {
-                    mainVideo.addEventListener('loadeddata', function onLoaded() {
-                        mainVideo.removeEventListener('loadeddata', onLoaded);
-                        loadingState.classList.add('hidden');
-                        resolve();
-                    });
-                });
-            } catch (error) {
-                console.error('Error loading video via Blob:', error);
-                loadingState.classList.add('hidden');
-                throw error;
-                pauseIcon.classList.remove('hidden');
             } else {
-                playIcon.classList.remove('hidden');
-                pauseIcon.classList.add('hidden');
+                this.exitFullscreen();
             }
+        } catch (error) {
+            console.error('Fullscreen error:', error);
         }
+    }
 
-        function updateMuteButton() {
-            if (isMuted) {
-                muteIcon.classList.add('hidden');
-                mutedIcon.classList.remove('hidden');
-            } else {
-                muteIcon.classList.remove('hidden');
-                mutedIcon.classList.add('hidden');
+    exitFullscreen() {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+        }
+    }
+
+    handleFullscreenChange() {
+        this.isFullscreen = !!(document.fullscreenElement || 
+                               document.webkitFullscreenElement || 
+                               document.mozFullScreenElement);
+        
+        if (this.isFullscreen) {
+            this.fullscreenIcon.className = 'fas fa-compress';
+            // Force video attributes in fullscreen
+            this.mainVideo.controls = false;
+            this.mainVideo.setAttribute('playsinline', '');
+            this.mainVideo.style.pointerEvents = 'none';
+        } else {
+            this.fullscreenIcon.className = 'fas fa-expand';
+        }
+        
+        // Show controls temporarily when entering/exiting fullscreen
+        this.showControlsTemporarily();
+    }
+
+    updateSlideCounter() {
+        this.slideCounter.textContent = `${this.currentSlide + 1} / ${this.slides.length}`;
+    }
+
+    updateNavigationButtons() {
+        const currentSlide = this.slides[this.currentSlide];
+        
+        // Title slide: только стрелка вперед, убираем play button
+        if (currentSlide.type === "title") {
+            this.prevButton.style.display = "none";
+            this.nextButton.style.display = "flex";
+            this.nextButton.disabled = false;
+            this.playButton.style.display = "none";
+        } 
+        // End slide: только play и назад
+        else if (currentSlide.type === "end") {
+            this.prevButton.style.display = "flex";
+            this.nextButton.style.display = "none";
+            this.prevButton.disabled = false;
+            this.playButton.style.display = "flex";
+        } 
+        // Обычные слайды: полная навигация
+        else {
+            this.prevButton.style.display = "flex";
+            this.nextButton.style.display = "flex";
+            this.prevButton.disabled = this.currentSlide === 0;
+            this.nextButton.disabled = this.currentSlide === this.slides.length - 1;
+            this.playButton.style.display = "flex";
+        }
+    }
+
+    generateChapters() {
+        const chapters = {};
+        
+        this.slides.forEach((slide, index) => {
+            if (!chapters[slide.chapter]) {
+                chapters[slide.chapter] = [];
             }
-        }
-
-        function updateSlideCounter() {
-            let displayText;
-            if (currentSlide === 0) {
-                displayText = 'Title';
-            } else if (currentSlide === videoSources.length - 1) {
-                displayText = 'End';
-            } else {
-                displayText = `Chapter ${currentSlide}`;
-            }
-            slideCounter.textContent = `${displayText} / ${videoSources.length}`;
-        }
-
-        function updateChapterList() {
-            const items = chapterList.querySelectorAll('.chapter-item');
-            items.forEach((item, index) => {
-                if (index === currentSlide) {
-                    item.classList.add('active');
-                } else {
-                    item.classList.remove('active');
-                }
-            });
-        }
-
-        function updateControls() {
-            prevBtn.style.display = currentSlide === 0 ? 'none' : 'flex';
-            playBtn.style.display = currentSlide === 0 ? 'none' : 'flex';
-            nextBtn.style.display = currentSlide === videoSources.length - 1 ? 'none' : 'flex';
-
-            // Update mobile fullscreen arrows
-            if (mobilePrevArrow) {
-                mobilePrevArrow.disabled = currentSlide === 0;
-            }
-            if (mobileNextArrow) {
-                mobileNextArrow.disabled = currentSlide === videoSources.length - 1;
-            }
-        }
-
-        // --- Generate chapter list ---
-        function generateChapterList() {
-            chapterList.innerHTML = '';
-            videoSources.forEach((video, index) => {
-                const button = document.createElement('button');
-                button.className = 'chapter-item';
-                button.innerHTML = `
-                    <span>${video.title}</span>
-                    <span class="chapter-indicator">›</span>
+            chapters[slide.chapter].push({ ...slide, index });
+        });
+        
+        this.chapterList.innerHTML = '';
+        
+        Object.keys(chapters).forEach(chapterNum => {
+            chapters[chapterNum].forEach(slide => {
+                const chapterItem = document.createElement('button');
+                chapterItem.className = 'chapter-item';
+                chapterItem.innerHTML = `
+                    <span>${slide.title}</span>
+                    <span class="chapter-indicator">${slide.index === this.currentSlide ? '▶' : ''}</span>
                 `;
-                button.addEventListener('click', async () => {
-                    await loadVideo(index, true);
-                    toggleDropdown();
+                
+                chapterItem.addEventListener('click', () => {
+                    this.loadSlide(slide.index);
+                    this.toggleDropdown();
                 });
-                chapterList.appendChild(button);
+                
+                this.chapterList.appendChild(chapterItem);
             });
-        }
+        });
+        
+        this.updateChapterActive();
+    }
 
-        // --- Navigation logic ---
-        async function goToPrevious() {
-            if (currentSlide > 0) {
-                await loadVideo(currentSlide - 1, true);
-            }
-        }
-
-        async function goToNext() {
-            if (currentSlide < videoSources.length - 1) {
-                await loadVideo(currentSlide + 1, true);
-            }
-        }
-
-        // --- Play/pause/mute handlers ---
-        playBtn.addEventListener('click', function() {
-            if (isPlaying) {
-                mainVideo.pause();
-                isPlaying = false;
+    updateChapterActive() {
+        const items = this.chapterList.querySelectorAll('.chapter-item');
+        items.forEach((item, index) => {
+            const indicator = item.querySelector('.chapter-indicator');
+            if (index === this.currentSlide) {
+                item.classList.add('active');
+                indicator.textContent = '▶';
             } else {
-                // Unmute on user interaction
-                if (isMuted) {
-                    isMuted = false;
-                    mainVideo.muted = false;
-                    updateMuteButton();
-                }
-                mainVideo.play().catch(()=>{});
-                isPlaying = true;
+                item.classList.remove('active');
+                indicator.textContent = '';
             }
-            updatePlayButton();
         });
+    }
 
-        muteBtn.addEventListener('click', function() {
-            isMuted = !isMuted;
-            mainVideo.muted = isMuted;
-            updateMuteButton();
-        });
+    toggleDropdown() {
+        this.dropdownMenu.classList.toggle('visible');
+    }
 
-        volumeSlider.addEventListener('input', function(e) {
-            const v = e.target.value / 100;
-            mainVideo.volume = v;
-            isMuted = v === 0;
-            mainVideo.muted = isMuted;
-            updateMuteButton();
-        });
-
-        // --- Fullscreen logic ---
-        function enterFullscreen() {
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-            if (isIOS && isSafari) {
-                // iOS Safari: only video can go fullscreen
-                if (mainVideo.webkitEnterFullscreen) {
-                    console.log('iOS Safari: using webkitEnterFullscreen on video');
-                    mainVideo.webkitEnterFullscreen();
-                } else {
-                    console.log('iOS Safari: webkitEnterFullscreen not available');
-                }
-            } else {
-                // Other browsers: use Fullscreen API on container
-                if (playerContainer.requestFullscreen) {
-                    console.log('Requesting fullscreen on playerContainer');
-                    playerContainer.requestFullscreen();
-                } else if (playerContainer.webkitRequestFullscreen) {
-                    playerContainer.webkitRequestFullscreen();
-                } else if (playerContainer.msRequestFullscreen) {
-                    playerContainer.msRequestFullscreen();
-                } else {
-                    console.log('Fullscreen API not available');
-                }
-            }
+    handleOutsideClick(e) {
+        if (!e.target.closest('.dropdown-button-container')) {
+            this.dropdownMenu.classList.remove('visible');
         }
+    }
 
-        // Attach fullscreen button to new logic
-        fullscreenBtn.addEventListener('click', enterFullscreen);
+    showLoading() {
+        this.loadingState.classList.remove('hidden');
+    }
 
-        // --- Dropdown logic ---
-        dropdownButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            toggleDropdown();
-            // On mobile, hide overlay when dropdown is open, show when closed
-            if (isReallyMobile()) {
-                if (showDropdown) {
-                    overlay.style.display = 'none';
-                    overlay.style.pointerEvents = 'none';
-                } else {
-                    overlay.style.display = 'block';
-                    overlay.style.pointerEvents = 'auto';
-                }
-            }
-        });
+    hideLoading() {
+        this.loadingState.classList.add('hidden');
+    }
+}
 
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.dropdown-button-container') && showDropdown) {
-                toggleDropdown();
-                // On mobile, show overlay again when dropdown closes
-                if (isReallyMobile()) {
-                    overlay.style.display = 'block';
-                    overlay.style.pointerEvents = 'auto';
-                }
-            }
-        });
+// Initialize player when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.player = new VideoPlayer();
+});
 
-        // --- Controls auto-hide on desktop ---
-        function showControlsTemporarily() {
-            controlsContainer.classList.remove('hidden');
-            console.log('Controls shown');
-            clearTimeout(controlsTimeout);
-            controlsTimeout = setTimeout(() => {
-                controlsContainer.classList.add('hidden');
-                console.log('Controls hidden');
-            }, 1500);
+// Handle page visibility changes
+document.addEventListener('visibilitychange', () => {
+    if (window.player && document.hidden && window.player.isPlaying) {
+        window.player.mainVideo.pause();
+        window.player.isPlaying = false;
+        window.player.playIcon.className = 'fas fa-play';
+    }
+});
+
+// Prevent context menu on video
+document.addEventListener('contextmenu', (e) => {
+    if (e.target.closest('.main-video')) {
+        e.preventDefault();
+    }
+});
+
+// Additional mobile fixes
+if ('ontouchstart' in window) {
+    // Disable double-tap zoom
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', (event) => {
+        const now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
         }
-
-        document.addEventListener('mousemove', showControlsTemporarily);
-        document.addEventListener('touchstart', showControlsTemporarily);
-        videoContainer.addEventListener('click', showControlsTemporarily);
-
-        // --- Arrow button handlers ---
-        prevBtn.addEventListener('click', async function(e) {
-            console.log('Prev arrow clicked');
-            await goToPrevious();
-        });
-
-        nextBtn.addEventListener('click', async function(e) {
-            console.log('Next arrow clicked');
-            await goToNext();
-        });
-
-        // --- Mobile fullscreen arrow handlers ---
-        mobilePrevArrow.addEventListener('click', async function(e) {
-            console.log('Mobile prev arrow clicked');
-            e.stopPropagation();
-            await goToPrevious();
-        });
-
-        mobileNextArrow.addEventListener('click', async function(e) {
-            console.log('Mobile next arrow clicked');
-            e.stopPropagation();
-            await goToNext();
-        });
-
-        // --- Keyboard navigation ---
-        document.addEventListener('keydown', async function(e) {
-            if (e.key === ' ' || e.key === 'Spacebar') {
-                playBtn.click();
-                e.preventDefault();
-            } else if (e.key === 'ArrowLeft') {
-                await goToPrevious();
-            } else if (e.key === 'ArrowRight') {
-                await goToNext();
-            } else if (e.key === 'f') {
-                fullscreenBtn.click();
-            } else if (e.key === 'm') {
-                muteBtn.click();
-            }
-        });
-
-        // --- Dropdown toggle logic ---
-        function toggleDropdown() {
-            if (!dropdownMenu) {
-                return;
-            }
-            showDropdown = !showDropdown;
-            if (showDropdown) {
-                dropdownMenu.classList.add('visible');
-            } else {
-                dropdownMenu.classList.remove('visible');
-            }
-        }
-
-        // --- Initialization ---
-        async function initialize() {
-            enableMobileSwipe();
-            generateChapterList();
-            await loadVideo(0); // Always start with Title slide
-            showControlsTemporarily();
-        }
-
-        document.addEventListener('DOMContentLoaded', initialize);
-
-        // Remove legacy/duplicate IIFE and event handlers. All logic is now in main script.
-
+        lastTouchEnd = now;
+    }, false);
+    
+    // Prevent pinch zoom
+    document.addEventListener('gesturestart', (e) => e.preventDefault());
+    document.addEventListener('gesturechange', (e) => e.preventDefault());
+}
     </script>
 </body>
-</html> 
+</html>
