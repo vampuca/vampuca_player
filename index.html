@@ -36,39 +36,40 @@
             width: 100%;
             height: 100%;
             object-fit: contain;
-            z-index: 1; /* Видео находится под оверлеем свайпа */
+            z-index: 1; 
         }
 
-        /* --- SWIPER STYLES --- */
+        /* Preload video is completely hidden */
+        .preload-video {
+            display: none;
+        }
+
         .swiper {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 1500; /* Swiper - это прозрачный слой для свайпов поверх видео */
+            z-index: 1500; 
         }
 
         .swiper-slide {
-            background: transparent; /* Слайды должны быть прозрачными */
+            background: transparent; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
         }
         
-        /* Отключаем события мыши для Swiper на десктопе, чтобы клики работали по видео */
-        .swiper:not(.swiper-allow-touch-move) {
-            pointer-events: none;
-        }
-        /* --- END SWIPER STYLES --- */
-
-        /* --- DESKTOP/MOBILE NAV ARROWS --- */
         .nav-arrows {
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            z-index: 1501; /* Поверх Swiper, но под остальным UI */
-            pointer-events: none; /* Контейнер не перехватывает клики */
-            display: none; /* Скрыты по умолчанию, включаются медиа-запросом */
+            z-index: 1501; 
+            pointer-events: none;
+            display: block; 
         }
 
         .nav-arrow {
@@ -82,7 +83,7 @@
             font-size: 24px;
             font-weight: 100;
             cursor: pointer;
-            pointer-events: auto; /* Кнопки перехватывают клики */
+            pointer-events: auto; 
             display: flex;
             align-items: center;
             justify-content: center;
@@ -101,25 +102,15 @@
         .nav-arrow.left { left: 20px; }
         .nav-arrow.right { right: 20px; }
         
-        .nav-arrow:disabled {
-            opacity: 0.2;
-            cursor: not-allowed;
-            background: transparent;
+        .nav-arrow[style*="display: none"] {
+            pointer-events: none;
         }
-        
-        /* Показываем стрелки на ЛЮБЫХ устройствах */
-        .nav-arrows {
-            display: block;
-        }
-
-        /* --- END NAV ARROWS --- */
-
 
         .studio-branding {
             position: absolute;
             top: 1rem;
             right: 1rem;
-            z-index: 1600; /* Выше чем Swiper */
+            z-index: 1600; 
             display: flex;
             align-items: center;
             gap: 0.5rem;
@@ -232,7 +223,7 @@
             position: absolute;
             top: 1rem;
             left: 1rem;
-            z-index: 1600; /* Выше чем Swiper */
+            z-index: 1600; 
             background: rgba(0,0,0,0.7);
             padding: 0.5rem 1rem;
             border-radius: 0.5rem;
@@ -313,12 +304,15 @@
             justify-content: center; min-width: 3rem; min-height: 3rem;
             z-index: 2001;
         }
-        .control-button:hover:not(:disabled) {
+        .control-button:hover:not([style*="display: none"]) {
             color: hsl(14,100%,60%); background: rgba(255,133,51,0.1);
             border-color: rgba(255,133,51,0.3); transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(255,133,51,0.2);
         }
-        .control-button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .control-button[style*="display: none"] {
+             pointer-events: none;
+             opacity: 0;
+        }
 
         .play-button {
             background: linear-gradient(135deg, hsl(14,100%,60%) 0%, hsl(14,100%,55%) 100%) !important;
@@ -326,7 +320,7 @@
             border-radius: 50% !important; border: none !important;
             box-shadow: 0 6px 20px rgba(255,133,51,0.4);
         }
-        .play-button:hover {
+        .play-button:hover:not([style*="display: none"]) {
             background: linear-gradient(135deg, hsl(14,100%,55%) 0%, hsl(14,100%,50%) 100%) !important;
             box-shadow: 0 8px 25px rgba(255,133,51,0.5);
             transform: translateY(-2px) !important;
@@ -347,7 +341,7 @@
         .loading-state {
             position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
             background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
-            z-index: 3000; /* Выше всего */
+            z-index: 3000;
         }
         .loading-spinner {
             width: 3rem; height: 3rem; border: 3px solid rgba(255,133,51,0.2);
@@ -403,7 +397,8 @@
 
     <div class="slide-counter"><span id="slideCounter">Title / 22</span></div>
 
-    <video id="mainVideo" class="main-video" preload="metadata" playsinline webkit-playsinline muted></video>
+    <video id="mainVideo" class="main-video" preload="metadata" playsinline webkit-playsinline></video>
+    <video id="preloadVideo" class="preload-video" preload="auto" playsinline webkit-playsinline muted></video>
 
     <div id="swiperContainer" class="swiper">
         <div class="swiper-wrapper" id="swiperWrapper">
@@ -411,8 +406,8 @@
     </div>
 
     <div class="nav-arrows">
-        <button class="nav-arrow left" id="navPrev">‹</button>
-        <button class="nav-arrow right" id="navNext">›</button>
+        <button class="nav-arrow left" id="navPrev"></button>
+        <button class="nav-arrow right" id="navNext"></button>
     </div>
 
     <div id="loadingState" class="loading-state hidden">
@@ -432,7 +427,7 @@
             <div class="controls-right">
                 <div class="volume-control">
                     <button id="muteBtn" class="volume-button"></button>
-                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="50"/>
+                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="100"/>
                 </div>
                 <button id="fullscreenBtn" class="fullscreen-button"></button>
             </div>
@@ -444,9 +439,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Robust mobile detection ---
-    const isReallyMobile = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (typeof window.orientation !== 'undefined') || window.innerWidth <= 800;
-
     // --- Video sources ---
     const videoSources = [
         { id: 1, src: 'KLKT_TITLE.m4v', title: 'Title' },
@@ -457,6 +449,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DOM elements ---
     const playerContainer = document.getElementById('playerContainer');
     const mainVideo = document.getElementById('mainVideo');
+    const preloadVideo = document.getElementById('preloadVideo');
+    const swiperContainer = document.getElementById('swiperContainer');
     const swiperWrapper = document.getElementById('swiperWrapper');
     const loadingState = document.getElementById('loadingState');
     const loadingText = document.getElementById('loadingText');
@@ -474,15 +468,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const navPrev = document.getElementById('navPrev');
     const navNext = document.getElementById('navNext');
 
-
     // --- State ---
     let isPlaying = false;
-    let isMuted = true; // Start muted
+    let isMuted = false; // SOUND IS ON BY DEFAULT
     let swiper;
+    let isLoading = false; // Loading lock state
+
+    // --- Preload next video ---
+    function preloadNext(index) {
+        const nextIndex = index + 1;
+        if (nextIndex < videoSources.length) {
+            preloadVideo.src = videoSources[nextIndex].src;
+            preloadVideo.load();
+        }
+    }
 
     // --- Load video ---
     async function loadVideo(index, autoplay = false) {
-        if (index < 0 || index >= videoSources.length) return;
+        if (isLoading) return; // Prevent new loads while one is in progress
+        isLoading = true;
+
+        if (index < 0 || index >= videoSources.length) {
+            isLoading = false;
+            return;
+        }
 
         isPlaying = false;
         loadingState.classList.remove('hidden');
@@ -502,28 +511,36 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     loadingState.classList.add('hidden');
                     if (autoplay) {
-                        if (mainVideo.muted) {
-                            mainVideo.muted = false;
-                            isMuted = false;
+                        const playPromise = mainVideo.play();
+                        if (playPromise !== undefined) {
+                            playPromise.then(() => {
+                                isPlaying = true;
+                                updateUI(index);
+                            }).catch(e => {
+                                console.warn("Autoplay was blocked by the browser.", e);
+                                isPlaying = false;
+                                updateUI(index);
+                            });
                         }
-                        mainVideo.play().catch(e => console.error("Play failed:", e));
-                        isPlaying = true;
                     }
                     updateUI(index);
+                    preloadNext(index); // Preload the next video
                     resolve();
                 };
                 const onError = (e) => {
                     mainVideo.removeEventListener('loadeddata', onLoadedData);
                     mainVideo.removeEventListener('error', onError);
-                    reject(new Error(`Video loading error: ${e.target.error ? e.target.error.message : 'unknown'}`));
+                    reject(new Error(`Could not load video.`));
                 };
                 mainVideo.addEventListener('loadeddata', onLoadedData);
                 mainVideo.addEventListener('error', onError);
             });
         } catch (error) {
             console.error('Error in loadVideo:', error);
-            loadingState.classList.add('hidden');
+            loadingText.textContent = error.message; // Show error to the user
             updateUI(index);
+        } finally {
+            isLoading = false; // Release the lock
         }
     }
 
@@ -542,7 +559,10 @@ document.addEventListener('DOMContentLoaded', () => {
             `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8,5.14V19.14L19,12.14L8,5.14Z"/></svg>`;
     };
     const updateMuteButton = () => {
-        mainVideo.muted = isMuted;
+        mainVideo.muted = isMuted; // This is the persistent rule
+        if (isMuted) {
+            volumeSlider.value = 0;
+        }
         muteBtn.innerHTML = isMuted ?
             `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73L4.27,3M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18.23,4.14 14,3.23V5.29C17.14,6.14 19,8.83 19,12Z"/></svg>` :
             `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"/></svg>`;
@@ -563,21 +583,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateControls = (currentIndex) => {
         const isFirst = currentIndex === 0;
         const isLast = currentIndex === videoSources.length - 1;
-        [prevBtn, navPrev].forEach(btn => btn.disabled = isFirst);
-        [nextBtn, navNext].forEach(btn => btn.disabled = isLast);
+        [prevBtn, navPrev].forEach(btn => btn.style.display = isFirst ? 'none' : 'flex');
+        [nextBtn, navNext].forEach(btn => btn.style.display = isLast ? 'none' : 'flex');
+        playBtn.style.display = (isFirst || isLast) ? 'none' : 'flex';
     };
     
     // --- Navigation ---
-    const goToPrevious = () => { if (swiper.activeIndex > 0) swiper.slidePrev(); };
-    const goToNext = () => { if (swiper.activeIndex < videoSources.length - 1) swiper.slideNext(); };
+    const goToPrevious = () => { if (!isLoading && swiper.activeIndex > 0) swiper.slidePrev(); };
+    const goToNext = () => { if (!isLoading && swiper.activeIndex < videoSources.length - 1) swiper.slideNext(); };
     
     // --- Setup Functions ---
     function setupSwiper() {
         swiperWrapper.innerHTML = videoSources.map(() => `<div class="swiper-slide"></div>`).join('');
         swiper = new Swiper('.swiper', {
-            allowTouchMove: isReallyMobile(),
+            allowTouchMove: true, 
             on: {
                 slideChange: (s) => {
+                    // This is the updated logic as per your request
                     const autoplay = s.isBeginning === false;
                     loadVideo(s.activeIndex, autoplay);
                 },
@@ -585,16 +607,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function toggleFullscreen() {
+        const elem = playerContainer;
+        if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement) {
+            if (elem.requestFullscreen) elem.requestFullscreen();
+            else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+            else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+            else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen();
+        } else {
+            if (document.exitFullscreen) document.exitFullscreen();
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            else if (document.msExitFullscreen) document.msExitFullscreen();
+            else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+        }
+    }
+
     function setupEventListeners() {
         // Main Controls
         playBtn.addEventListener('click', () => {
             isPlaying = !isPlaying;
-            if (isPlaying) {
-                if (isMuted) isMuted = false;
-                mainVideo.play().catch(()=>{});
-            } else {
-                mainVideo.pause();
-            }
+            if (isPlaying) mainVideo.play().catch(()=>{});
+            else mainVideo.pause();
             updateUI(swiper.activeIndex);
         });
         muteBtn.addEventListener('click', () => {
@@ -607,9 +640,13 @@ document.addEventListener('DOMContentLoaded', () => {
             isMuted = v === 0;
             updateUI(swiper.activeIndex);
         });
-        fullscreenBtn.addEventListener('click', () => {
-            if (!document.fullscreenElement) playerContainer.requestFullscreen().catch(() => {});
-            else document.exitFullscreen();
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+        // Click on video to Play/Pause
+        swiperContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('swiper-slide') && playBtn.style.display !== 'none') {
+                playBtn.click();
+            }
         });
 
         // Navigation Controls
@@ -624,7 +661,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Keyboard
         document.addEventListener('keydown', (e) => {
             if (document.activeElement.tagName === 'INPUT') return;
-            const keyMap = { ' ': playBtn.click.bind(playBtn), 'ArrowLeft': goToPrevious, 'ArrowRight': goToNext, 'f': fullscreenBtn.click.bind(fullscreenBtn), 'm': muteBtn.click.bind(muteBtn) };
+            const keyMap = { ' ': playBtn.click.bind(playBtn), 'ArrowLeft': goToPrevious, 'ArrowRight': goToNext, 'f': toggleFullscreen, 'm': muteBtn.click.bind(muteBtn) };
+            if (keyMap[e.key] && e.key === ' ' && playBtn.style.display === 'none') return;
+            
             if (keyMap[e.key]) {
                 e.preventDefault();
                 keyMap[e.key]();
@@ -640,10 +679,13 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         playerContainer.addEventListener('mousemove', showControlsTemporarily);
         playerContainer.addEventListener('touchstart', showControlsTemporarily, {passive: true});
-        showControlsTemporarily(); // Show on init
+        showControlsTemporarily();
     }
 
     function generateInitialUI() {
+        navPrev.innerHTML = `‹`;
+        navNext.innerHTML = `›`;
+
         prevBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5m7-7l-7 7 7 7"/></svg>`;
         nextBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>`;
         fullscreenBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
@@ -655,7 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `).join('');
         chapterList.addEventListener('click', (e) => {
             const item = e.target.closest('.chapter-item');
-            if (item) {
+            if (item && !isLoading) {
                 const index = parseInt(item.dataset.index, 10);
                 swiper.slideTo(index);
                 dropdownMenu.classList.remove('visible');
@@ -668,7 +710,7 @@ document.addEventListener('DOMContentLoaded', () => {
         generateInitialUI();
         setupSwiper();
         setupEventListeners();
-        loadVideo(0, false); // Initial load
+        loadVideo(0, false);
     }
     
     initialize();
@@ -676,9 +718,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-
-
-
-
-
-
