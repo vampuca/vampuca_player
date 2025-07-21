@@ -72,6 +72,29 @@
 
         @media (max-width: 768px) {
             .fullscreen-button { display: none; }
+
+            .controls-container {
+                padding: 2rem 0.5rem 0.5rem; /* Reduced padding for a thinner look */
+            }
+            .controls-panel {
+                padding: 0.5rem;
+                gap: 0.5rem;
+            }
+            .control-button {
+                padding: 0.5rem;
+                min-width: 44px;
+                min-height: 44px;
+            }
+            .play-button {
+                padding: 0.75rem !important;
+            }
+            .play-button svg {
+                width: 20px !important;
+                height: 20px !important;
+            }
+            .volume-slider {
+                width: 60px;
+            }
         }
     </style>
 </head>
@@ -286,7 +309,25 @@ document.addEventListener('DOMContentLoaded', () => {
             hideTimeout = setTimeout(() => controlsContainer.classList.add('hidden'), 3000);
         };
         playerContainer.addEventListener('mousemove', showControls);
-        playerContainer.addEventListener('touchstart', showControls, {passive: true});
+
+        // Logic to show controls on tap but not on swipe for mobile
+        let touchStartX = 0;
+        let touchStartY = 0;
+        playerContainer.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        playerContainer.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            const deltaX = Math.abs(touchEndX - touchStartX);
+            const deltaY = Math.abs(touchEndY - touchStartY);
+
+            if (deltaX < 10 && deltaY < 10) { // It's a tap
+                showControls();
+            }
+        }, { passive: true });
         
         const toggleDropdown = (show) => dropdownMenu.classList.toggle('visible', show);
         dropdownButton.addEventListener('click', (e) => {
