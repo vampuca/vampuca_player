@@ -61,68 +61,7 @@
             cursor: pointer;
         }
         
-        .nav-arrows {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 1501; /* Higher than swiper to be clickable */
-            pointer-events: none;
-            display: none; /* Hide by default */
-        }
-
-        /* Show arrows only on mobile */
-        @media (max-width: 768px) {
-            .nav-arrows {
-                display: block;
-            }
-        }
-
-        .nav-arrow {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 36px;
-            height: 60px;
-            background: rgba(0, 0, 0, 0.1);
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 24px;
-            font-weight: 100;
-            cursor: pointer;
-            pointer-events: auto; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            transition: all 0.2s ease-in-out;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(5px);
-        }
-        
-        .nav-arrow:hover {
-            background: rgba(0, 0, 0, 0.4);
-            color: white;
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        .nav-arrow.left { left: 20px; }
-        .nav-arrow.right { right: 20px; }
-        
-        .nav-arrow[style*="display: none"] {
-            pointer-events: none;
-        }
-
-        /* Shake animation for locked buttons */
-        .nav-arrow.locked {
-            animation: shake 0.5s ease-in-out;
-        }
-        @keyframes shake {
-            0%, 100% { transform: translateY(-50%) translateX(0); }
-            20%, 60% { transform: translateY(-50%) translateX(-3px); }
-            40%, 80% { transform: translateY(-50%) translateX(3px); }
-        }
-
+        /* All .nav-arrows and .nav-arrow related styles will be removed */
 
         .studio-branding {
             position: absolute;
@@ -464,11 +403,7 @@
         </div>
     </div>
 
-    <!-- Navigation Arrows for Desktop AND Mobile -->
-    <div class="nav-arrows">
-        <button class="nav-arrow left" id="navPrev"></button>
-        <button class="nav-arrow right" id="navNext"></button>
-    </div>
+    <!-- Navigation Arrows Removed -->
 
     <!-- Loading State -->
     <div id="loadingState" class="loading-state hidden">
@@ -537,8 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chapterList = document.getElementById('chapterList');
     const slideCounter = document.getElementById('slideCounter');
     const volumeSlider = document.getElementById('volumeSlider');
-    const navPrev = document.getElementById('navPrev');
-    const navNext = document.getElementById('navNext');
+    /* navPrev and navNext removed */
 
     // --- Icon Elements ---
     const playIcon = document.getElementById('playIcon');
@@ -557,12 +491,29 @@ document.addEventListener('DOMContentLoaded', () => {
     let swiper;
     let isLoading = false; // Loading lock state
     let currentBlobURL = null; // For managing blob object URLs
+    let preloadedVideoCache = {}; // Cache for pre-fetched video blobs on mobile
 
-    // --- Preload next video (Desktop only) ---
-    function preloadNext(index) {
-        if (isMobile()) return; // Preloading is disabled on mobile
+    // --- Preload next video (Desktop and Mobile) ---
+    async function preloadNext(index) {
         const nextIndex = index + 1;
-        if (nextIndex < videoSources.length) {
+        if (nextIndex >= videoSources.length) return;
+
+        if (isMobile()) {
+            if (preloadedVideoCache[nextIndex] && preloadedVideoCache[nextIndex] !== 'fetching') {
+                return; // Already cached or being fetched
+            }
+            try {
+                preloadedVideoCache[nextIndex] = 'fetching'; // Mark as in-progress
+                const resp = await fetch(videoSources[nextIndex].src);
+                if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
+                const data = await resp.arrayBuffer();
+                const blob = new Blob([data], { type: 'video/mp4' });
+                preloadedVideoCache[nextIndex] = blob; // Store the actual blob
+            } catch (error) {
+                console.error(`Failed to preload video ${nextIndex}:`, error);
+                delete preloadedVideoCache[nextIndex]; // Clean up on failure
+            }
+        } else {
             preloadVideo.src = videoSources[nextIndex].src;
             preloadVideo.load();
         }
@@ -586,10 +537,18 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // HYBRID LOADING: Use Blob on mobile, direct src on desktop
             if (isMobile()) {
-                const resp = await fetch(videoSources[index].src);
-                if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
-                const data = await resp.arrayBuffer();
-                const blob = new Blob([data], { type: 'video/mp4' }); // Use correct MIME type for .m4v
+                let blob;
+                // Use cached blob if available
+                if (preloadedVideoCache[index] && preloadedVideoCache[index] !== 'fetching') {
+                    blob = preloadedVideoCache[index];
+                    delete preloadedVideoCache[index]; // Consume from cache
+                } else {
+                    // Otherwise, fetch it now
+                    const resp = await fetch(videoSources[index].src);
+                    if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
+                    const data = await resp.arrayBuffer();
+                    blob = new Blob([data], { type: 'video/mp4' }); // Use correct MIME type for .m4v
+                }
                 
                 if (currentBlobURL) URL.revokeObjectURL(currentBlobURL);
                 currentBlobURL = URL.createObjectURL(blob);
@@ -685,23 +644,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateControls = (currentIndex) => {
         const isFirst = currentIndex === 0;
         const isLast = currentIndex === videoSources.length - 1;
-        [prevBtn, navPrev].forEach(btn => btn.style.display = isFirst ? 'none' : 'flex');
-        [nextBtn, navNext].forEach(btn => btn.style.display = isLast ? 'none' : 'flex');
+        prevBtn.style.display = isFirst ? 'none' : 'flex';
+        nextBtn.style.display = isLast ? 'none' : 'flex';
         playBtn.style.display = (isFirst || isLast) ? 'none' : 'flex';
     };
     
     // --- Navigation ---
-    function showLockedFeedback(button) {
-        if (!button) return;
-        button.classList.add('locked');
-        setTimeout(() => button.classList.remove('locked'), 500);
-    }
+    /* showLockedFeedback function removed */
     const goToPrevious = () => {
-        if (isLoading) { showLockedFeedback(navPrev); return; }
+        if (isLoading) return;
         if (swiper.activeIndex > 0) swiper.slidePrev();
     };
     const goToNext = () => {
-        if (isLoading) { showLockedFeedback(navNext); return; }
+        if (isLoading) return;
         if (swiper.activeIndex < videoSources.length - 1) swiper.slideNext();
     };
     
@@ -767,8 +722,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Navigation Controls
-        [prevBtn, navPrev].forEach(btn => btn.addEventListener('click', goToPrevious));
-        [nextBtn, navNext].forEach(btn => btn.addEventListener('click', goToNext));
+        prevBtn.addEventListener('click', goToPrevious);
+        nextBtn.addEventListener('click', goToNext);
 
         // Dropdown
         const toggleDropdown = (show) => dropdownMenu.classList.toggle('visible', show);
@@ -809,8 +764,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateMuteButton();
         updateFullscreenButton();
         
-        navPrev.innerHTML = `‹`;
-        navNext.innerHTML = `›`;
+        /* navPrev and navNext innerHTML assignments removed */
 
         prevBtn.innerHTML = `<svg class="control-icon" viewBox="0 0 24 24"><path d="M19 12H5m7-7l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2"/></svg>`;
         nextBtn.innerHTML = `<svg class="control-icon" viewBox="0 0 24 24"><path d="M5 12h14m-7-7l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2"/></svg>`;
