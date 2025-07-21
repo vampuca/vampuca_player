@@ -40,7 +40,16 @@
         .play-button:hover { background: linear-gradient(135deg, hsl(14,100%,55%) 0%, hsl(14,100%,50%) 100%) !important; transform: translateY(-2px); }
         .play-button svg { width: 24px !important; height: 24px !important; }
         .loading-state { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); z-index: 3000; }
+        .loading-spinner { width: 3rem; height: 3rem; border: 3px solid rgba(255,133,51,0.2); border-top: 3px solid hsl(14,100%,60%); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .loading-text { text-align: center; color: white; font-size: 0.875rem; margin-top: 1rem; }
         .hidden { display: none; }
+
+        @media (max-width: 768px) {
+            .fullscreen-button {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -60,7 +69,12 @@
     <div id="swiperContainer" class="swiper">
         <div class="swiper-wrapper" id="swiperWrapper"></div>
     </div>
-    <div id="loadingState" class="loading-state hidden"></div>
+    <div id="loadingState" class="loading-state hidden">
+        <div>
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading...</div>
+        </div>
+    </div>
     <div id="controlsContainer" class="controls-container">
         <div class="controls-panel">
             <div class="controls-left">
@@ -117,15 +131,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const fullscreenEnterIcon = document.getElementById('fullscreenEnterIcon');
     const fullscreenExitIcon = document.getElementById('fullscreenExitIcon');
     
-    let isPlaying = false;
-    let isMuted = true;
+    const playerState = {
+        isPlaying: false,
+        isMuted: true,
+        currentLoadId: 0
+    };
+    
     let swiper;
-    let currentLoadId = 0;
 
     async function loadVideo(index, autoplay) {
-        currentLoadId++;
-        const loadId = currentLoadId;
+        playerState.currentLoadId++;
+        const loadId = playerState.currentLoadId;
         
+        loadingState.innerHTML = `<div><div class="loading-spinner"></div><div class="loading-text">Loading...</div></div>`;
         loadingState.classList.remove('hidden');
         
         mainVideo.pause();
@@ -135,30 +153,41 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await new Promise((resolve, reject) => {
                 const onCanPlay = () => {
-                    if (loadId !== currentLoadId) return reject('cancelled');
+                    if (loadId !== playerState.currentLoadId) return reject('cancelled');
                     mainVideo.removeEventListener('canplay', onCanPlay);
+                    mainVideo.removeEventListener('error', onError);
                     resolve();
                 };
+                const onError = () => {
+                    if (loadId !== playerState.currentLoadId) return reject('cancelled');
+                    mainVideo.removeEventListener('canplay', onCanPlay);
+                    mainVideo.removeEventListener('error', onError);
+                    reject('Video failed to load');
+                }
                 mainVideo.addEventListener('canplay', onCanPlay);
+                mainVideo.addEventListener('error', onError);
             });
 
-            if (loadId !== currentLoadId) return;
+            if (loadId !== playerState.currentLoadId) return;
 
             loadingState.classList.add('hidden');
             if (autoplay) {
-                isMuted = false;
+                playerState.isMuted = false;
                 mainVideo.muted = false;
                 const playPromise = mainVideo.play();
                 if (playPromise !== undefined) {
-                    playPromise.then(() => { isPlaying = true; updateUI(index); }).catch(e => { isPlaying = false; updateUI(index); });
+                    playPromise.then(() => { playerState.isPlaying = true; updateUI(index); }).catch(e => { playerState.isPlaying = false; updateUI(index); });
                 }
             } else {
-                isPlaying = false;
+                playerState.isPlaying = false;
                 updateUI(index);
             }
             preloadNext(index);
         } catch(e) {
-            if(e !== 'cancelled') console.error("Video load error:", e);
+            if(e !== 'cancelled') {
+                console.error("Video load error:", e);
+                loadingState.innerHTML = `<div class="loading-text">Error loading chapter.</div>`;
+            }
         }
     }
 
@@ -171,13 +200,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const updateUI = (currentIndex) => {
-        playIcon.classList.toggle('hidden', isPlaying);
-        pauseIcon.classList.toggle('hidden', !isPlaying);
-        muteIcon.classList.toggle('hidden', isMuted);
-        mutedIcon.classList.toggle('hidden', !isMuted);
-        if (!isMuted && mainVideo.volume > 0) {
+        playIcon.classList.toggle('hidden', playerState.isPlaying);
+        pauseIcon.classList.toggle('hidden', !playerState.isPlaying);
+        muteIcon.classList.toggle('hidden', playerState.isMuted);
+        mutedIcon.classList.toggle('hidden', !playerState.isMuted);
+        if (!playerState.isMuted && mainVideo.volume > 0) {
             volumeSlider.value = mainVideo.volume * 100;
-        } else if (isMuted) {
+        } else if (playerState.isMuted) {
             volumeSlider.value = 0;
         }
         const isFullscreen = !!document.fullscreenElement;
@@ -195,20 +224,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const goToNext = () => swiper.slideNext();
 
         playBtn.addEventListener('click', () => {
-            isPlaying = !isPlaying;
-            if (isPlaying) mainVideo.play(); else mainVideo.pause();
+            playerState.isPlaying = !playerState.isPlaying;
+            if (playerState.isPlaying) mainVideo.play(); else mainVideo.pause();
             updateUI(swiper.activeIndex);
         });
         muteBtn.addEventListener('click', () => {
-            isMuted = !isMuted;
-            mainVideo.muted = isMuted;
+            playerState.isMuted = !playerState.isMuted;
+            mainVideo.muted = playerState.isMuted;
             updateUI(swiper.activeIndex);
         });
         volumeSlider.addEventListener('input', (e) => {
             const newVolume = e.target.value / 100;
             mainVideo.volume = newVolume;
-            isMuted = newVolume === 0;
-            mainVideo.muted = isMuted;
+            playerState.isMuted = newVolume === 0;
+            mainVideo.muted = playerState.isMuted;
             updateUI(swiper.activeIndex);
         });
         fullscreenBtn.addEventListener('click', () => {
@@ -260,7 +289,15 @@ document.addEventListener('DOMContentLoaded', () => {
         swiper = new Swiper('.swiper', {
             allowTouchMove: true,
             on: {
-                init: (s) => updateUI(s.activeIndex),
+                init: (s) => {
+                    if (mainVideo.readyState < 2) {
+                        loadingState.classList.remove('hidden');
+                    }
+                    mainVideo.addEventListener('loadeddata', () => {
+                        loadingState.classList.add('hidden');
+                        updateUI(s.activeIndex);
+                    }, { once: true });
+                },
                 slideChange: (s) => {
                     const autoplay = s.previousIndex !== s.activeIndex;
                     loadVideo(s.activeIndex, autoplay);
@@ -276,10 +313,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 swiper.slideTo(parseInt(e.target.dataset.index, 10));
             }
         });
-
-        mainVideo.addEventListener('canplay', () => loadingState.classList.add('hidden'), { once: true });
         
         setupEventListeners();
+        showControls();
     }
     
     initialize();
