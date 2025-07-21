@@ -320,7 +320,8 @@
             justify-content: center; min-width: 3rem; min-height: 3rem;
             z-index: 2001;
         }
-        .control-button svg {
+        
+        .control-icon {
             width: 20px;
             height: 20px;
             transition: all 0.3s ease;
@@ -482,15 +483,24 @@
         <div class="controls-panel">
             <div class="controls-left">
                 <button id="prevBtn" class="control-button"></button>
-                <button id="playBtn" class="control-button play-button"></button>
+                <button id="playBtn" class="control-button play-button">
+                    <svg id="playIcon" class="control-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8,5.14V19.14L19,12.14L8,5.14Z"/></svg>
+                    <svg id="pauseIcon" class="control-icon hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M14,19H18V5H14M6,19H10V5H6V19Z"/></svg>
+                </button>
                 <button id="nextBtn" class="control-button"></button>
             </div>
             <div class="controls-right">
                 <div class="volume-control">
-                    <button id="muteBtn" class="volume-button"></button>
+                    <button id="muteBtn" class="volume-button">
+                        <svg id="muteIcon" class="control-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                        <svg id="mutedIcon" class="control-icon hidden" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                    </button>
                     <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="100"/>
                 </div>
-                <button id="fullscreenBtn" class="fullscreen-button"></button>
+                <button id="fullscreenBtn" class="fullscreen-button">
+                    <svg id="fullscreenEnterIcon" class="control-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                    <svg id="fullscreenExitIcon" class="control-icon hidden" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M4 14h6v6m-6-6l7 7m3-17h6v6m-6-6l7 7"/></svg>
+                </button>
             </div>
         </div>
     </div>
@@ -530,6 +540,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const navPrev = document.getElementById('navPrev');
     const navNext = document.getElementById('navNext');
 
+    // --- Icon Elements ---
+    const playIcon = document.getElementById('playIcon');
+    const pauseIcon = document.getElementById('pauseIcon');
+    const muteIcon = document.getElementById('muteIcon');
+    const mutedIcon = document.getElementById('mutedIcon');
+    const fullscreenEnterIcon = document.getElementById('fullscreenEnterIcon');
+    const fullscreenExitIcon = document.getElementById('fullscreenExitIcon');
+    
     // --- UTILS ---
     const isMobile = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
@@ -636,24 +654,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updatePlayButton = () => {
-        playBtn.innerHTML = isPlaying ?
-            `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14,19H18V5H14M6,19H10V5H6V19Z"/></svg>` :
-            `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8,5.14V19.14L19,12.14L8,5.14Z"/></svg>`;
+        playIcon.classList.toggle('hidden', isPlaying);
+        pauseIcon.classList.toggle('hidden', !isPlaying);
     };
     const updateMuteButton = () => {
         mainVideo.muted = isMuted; 
-        if (isMuted) {
-            volumeSlider.value = 0;
-        }
-        muteBtn.innerHTML = isMuted ?
-            `<svg viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>` :
-            `<svg viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`;
+        if (isMuted) volumeSlider.value = 0;
+        
+        muteIcon.classList.toggle('hidden', isMuted);
+        mutedIcon.classList.toggle('hidden', !isMuted);
     };
     const updateFullscreenButton = () => {
         const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
-        fullscreenBtn.innerHTML = isFullscreen ?
-            `<svg viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M4 14h6v6m-6-6l7 7m3-17h6v6m-6-6l7 7"/></svg>` :
-            `<svg viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
+        fullscreenEnterIcon.classList.toggle('hidden', isFullscreen);
+        fullscreenExitIcon.classList.toggle('hidden', !isFullscreen);
     };
     const updateSlideCounter = (currentIndex) => {
         const total = videoSources.length - 2;
@@ -794,12 +808,12 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePlayButton();
         updateMuteButton();
         updateFullscreenButton();
-
+        
         navPrev.innerHTML = `‹`;
         navNext.innerHTML = `›`;
 
-        prevBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 12H5m7-7l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2"/></svg>`;
-        nextBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M5 12h14m-7-7l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2"/></svg>`;
+        prevBtn.innerHTML = `<svg class="control-icon" viewBox="0 0 24 24"><path d="M19 12H5m7-7l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2"/></svg>`;
+        nextBtn.innerHTML = `<svg class="control-icon" viewBox="0 0 24 24"><path d="M5 12h14m-7-7l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2"/></svg>`;
         
         chapterList.innerHTML = videoSources.map((video, index) => `
             <button class="chapter-item" data-index="${index}">
@@ -828,4 +842,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 </body>
-</html> 
+</html>
