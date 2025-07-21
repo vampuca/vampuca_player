@@ -196,8 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             loadingState.classList.add('hidden');
             if (autoplay) {
-                isMuted = false;
-                mainVideo.muted = false;
+                mainVideo.muted = isMuted; // Respect the persistent mute state
                 const playPromise = mainVideo.play();
                 if (playPromise !== undefined) {
                     playPromise.then(() => { isPlaying = true; updateUI(index); }).catch(e => { isPlaying = false; updateUI(index); });
@@ -327,6 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chapterList.addEventListener('click', (e) => {
             if(e.target.matches('.chapter-item')) {
                 swiper.slideTo(parseInt(e.target.dataset.index, 10));
+                dropdownMenu.classList.remove('visible'); // Close menu on selection
             }
         });
         
