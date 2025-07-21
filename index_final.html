@@ -67,7 +67,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            z-index: 1499; /* Arrows are BEHIND the swipe layer */
+            z-index: 1501; /* Higher than swiper to be clickable */
             pointer-events: none;
             display: none; /* Hide by default */
         }
@@ -589,7 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const resp = await fetch(videoSources[index].src);
                 if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
                 const data = await resp.arrayBuffer();
-                const blob = new Blob([data], { type: 'application/octet-stream' });
+                const blob = new Blob([data], { type: 'video/mp4' }); // Use correct MIME type for .m4v
                 
                 if (currentBlobURL) URL.revokeObjectURL(currentBlobURL);
                 currentBlobURL = URL.createObjectURL(blob);
