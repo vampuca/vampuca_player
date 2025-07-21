@@ -40,10 +40,35 @@
         .play-button:hover { background: linear-gradient(135deg, hsl(14,100%,55%) 0%, hsl(14,100%,50%) 100%) !important; transform: translateY(-2px); }
         .play-button svg { width: 24px !important; height: 24px !important; }
         .loading-state { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); z-index: 3000; }
-        .loading-spinner { width: 3rem; height: 3rem; border: 3px solid rgba(255,133,51,0.2); border-top: 3px solid hsl(14,100%,60%); border-radius: 50%; animation: spin 1s linear infinite; }
+        .loading-spinner {
+            position: relative;
+            width: 3rem;
+            height: 3rem;
+            border: 3px solid rgba(255,133,51,0.2);
+            border-top: 3px solid hsl(14,100%,60%);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        .loading-spinner::after {
+            content: 'V';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: hsl(14,100%,60%);
+            font-size: 1.5rem;
+            font-weight: bold;
+            font-family: inherit;
+        }
         @keyframes spin { 100% { transform: rotate(360deg); } }
         .loading-text { text-align: center; color: white; font-size: 0.875rem; margin-top: 1rem; }
         .hidden { display: none; }
+
+        /* Style for your custom spinner image */
+        .loading-spinner-custom {
+            width: 80px;  /* Set your image's width */
+            height: 80px; /* Set your image's height */
+        }
 
         @media (max-width: 768px) {
             .fullscreen-button { display: none; }
@@ -69,7 +94,12 @@
     </div>
     <div id="loadingState" class="loading-state hidden">
         <div>
+            <!-- Current CSS Spinner -->
             <div class="loading-spinner"></div>
+            
+            <!-- EXAMPLE for custom spinner: Uncomment the line below and comment out the div above -->
+            <!-- <img src="your-custom-spinner.gif" class="loading-spinner-custom" alt="Loading..."> -->
+
             <div class="loading-text" id="loadingText">Loading...</div>
         </div>
     </div>
@@ -264,6 +294,8 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
             toggleDropdown(!dropdownMenu.classList.contains('visible'));
         });
+        // This prevents a click inside the menu from closing it immediately
+        dropdownMenu.addEventListener('click', (e) => e.stopPropagation());
         document.addEventListener('click', () => toggleDropdown(false));
 
         document.addEventListener('fullscreenchange', () => updateUI(swiper.activeIndex));
