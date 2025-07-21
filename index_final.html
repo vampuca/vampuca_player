@@ -46,9 +46,7 @@
         .hidden { display: none; }
 
         @media (max-width: 768px) {
-            .fullscreen-button {
-                display: none;
-            }
+            .fullscreen-button { display: none; }
         }
     </style>
 </head>
@@ -72,7 +70,7 @@
     <div id="loadingState" class="loading-state hidden">
         <div>
             <div class="loading-spinner"></div>
-            <div class="loading-text">Loading...</div>
+            <div class="loading-text" id="loadingText">Loading...</div>
         </div>
     </div>
     <div id="controlsContainer" class="controls-container">
@@ -114,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const preloadVideo = document.getElementById('preloadVideo');
     const swiperWrapper = document.getElementById('swiperWrapper');
     const loadingState = document.getElementById('loadingState');
+    const loadingText = document.getElementById('loadingText');
     const controlsContainer = document.getElementById('controlsContainer');
     const playBtn = document.getElementById('playBtn');
     const prevBtn = document.getElementById('prevBtn');
@@ -131,20 +130,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const fullscreenEnterIcon = document.getElementById('fullscreenEnterIcon');
     const fullscreenExitIcon = document.getElementById('fullscreenExitIcon');
     
-    const playerState = {
-        isPlaying: false,
-        isMuted: true,
-        currentLoadId: 0
-    };
-    
+    let isPlaying = false;
+    let isMuted = true;
     let swiper;
+    let currentLoadId = 0;
 
     async function loadVideo(index, autoplay) {
-        playerState.currentLoadId++;
-        const loadId = playerState.currentLoadId;
+        currentLoadId++;
+        const loadId = currentLoadId;
         
-        loadingState.innerHTML = `<div><div class="loading-spinner"></div><div class="loading-text">Loading...</div></div>`;
         loadingState.classList.remove('hidden');
+        loadingText.textContent = `Loading...`;
         
         mainVideo.pause();
         mainVideo.src = videoSources[index].src;
@@ -153,40 +149,37 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await new Promise((resolve, reject) => {
                 const onCanPlay = () => {
-                    if (loadId !== playerState.currentLoadId) return reject('cancelled');
+                    if (loadId !== currentLoadId) return reject('cancelled');
                     mainVideo.removeEventListener('canplay', onCanPlay);
                     mainVideo.removeEventListener('error', onError);
                     resolve();
                 };
                 const onError = () => {
-                    if (loadId !== playerState.currentLoadId) return reject('cancelled');
-                    mainVideo.removeEventListener('canplay', onCanPlay);
-                    mainVideo.removeEventListener('error', onError);
+                    if (loadId !== currentLoadId) return reject('cancelled');
                     reject('Video failed to load');
                 }
                 mainVideo.addEventListener('canplay', onCanPlay);
                 mainVideo.addEventListener('error', onError);
             });
 
-            if (loadId !== playerState.currentLoadId) return;
+            if (loadId !== currentLoadId) return;
 
             loadingState.classList.add('hidden');
             if (autoplay) {
-                playerState.isMuted = false;
+                isMuted = false;
                 mainVideo.muted = false;
                 const playPromise = mainVideo.play();
                 if (playPromise !== undefined) {
-                    playPromise.then(() => { playerState.isPlaying = true; updateUI(index); }).catch(e => { playerState.isPlaying = false; updateUI(index); });
+                    playPromise.then(() => { isPlaying = true; updateUI(index); }).catch(e => { isPlaying = false; updateUI(index); });
                 }
             } else {
-                playerState.isPlaying = false;
+                isPlaying = false;
                 updateUI(index);
             }
             preloadNext(index);
         } catch(e) {
             if(e !== 'cancelled') {
-                console.error("Video load error:", e);
-                loadingState.innerHTML = `<div class="loading-text">Error loading chapter.</div>`;
+                 loadingText.textContent = `Error: ${e}`;
             }
         }
     }
@@ -200,13 +193,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const updateUI = (currentIndex) => {
-        playIcon.classList.toggle('hidden', playerState.isPlaying);
-        pauseIcon.classList.toggle('hidden', !playerState.isPlaying);
-        muteIcon.classList.toggle('hidden', playerState.isMuted);
-        mutedIcon.classList.toggle('hidden', !playerState.isMuted);
-        if (!playerState.isMuted && mainVideo.volume > 0) {
+        playIcon.classList.toggle('hidden', isPlaying);
+        pauseIcon.classList.toggle('hidden', !isPlaying);
+        muteIcon.classList.toggle('hidden', isMuted);
+        mutedIcon.classList.toggle('hidden', !isMuted);
+        if (!isMuted && mainVideo.volume > 0) {
             volumeSlider.value = mainVideo.volume * 100;
-        } else if (playerState.isMuted) {
+        } else if (isMuted) {
             volumeSlider.value = 0;
         }
         const isFullscreen = !!document.fullscreenElement;
@@ -224,20 +217,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const goToNext = () => swiper.slideNext();
 
         playBtn.addEventListener('click', () => {
-            playerState.isPlaying = !playerState.isPlaying;
-            if (playerState.isPlaying) mainVideo.play(); else mainVideo.pause();
+            isPlaying = !isPlaying;
+            if (isPlaying) mainVideo.play(); else mainVideo.pause();
             updateUI(swiper.activeIndex);
         });
         muteBtn.addEventListener('click', () => {
-            playerState.isMuted = !playerState.isMuted;
-            mainVideo.muted = playerState.isMuted;
+            isMuted = !isMuted;
+            mainVideo.muted = isMuted;
             updateUI(swiper.activeIndex);
         });
         volumeSlider.addEventListener('input', (e) => {
             const newVolume = e.target.value / 100;
             mainVideo.volume = newVolume;
-            playerState.isMuted = newVolume === 0;
-            mainVideo.muted = playerState.isMuted;
+            isMuted = newVolume === 0;
+            mainVideo.muted = isMuted;
             updateUI(swiper.activeIndex);
         });
         fullscreenBtn.addEventListener('click', () => {
@@ -249,15 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         document.addEventListener('keydown', (e) => {
             if (document.activeElement.tagName === 'INPUT') return;
-            
-            const keyMap = {
-                ' ': () => playBtn.click(),
-                'ArrowLeft': goToPrevious,
-                'ArrowRight': goToNext,
-                'f': () => fullscreenBtn.click(),
-                'm': () => muteBtn.click()
-            };
-
+            const keyMap = { ' ': () => playBtn.click(), 'ArrowLeft': goToPrevious, 'ArrowRight': goToNext, 'f': () => fullscreenBtn.click(), 'm': () => muteBtn.click() };
             if (keyMap[e.key]) {
                 if (e.key === ' ' && playBtn.style.display === 'none') return;
                 e.preventDefault();
@@ -290,13 +275,12 @@ document.addEventListener('DOMContentLoaded', () => {
             allowTouchMove: true,
             on: {
                 init: (s) => {
-                    if (mainVideo.readyState < 2) {
-                        loadingState.classList.remove('hidden');
-                    }
-                    mainVideo.addEventListener('loadeddata', () => {
+                    loadingState.classList.remove('hidden');
+                    mainVideo.addEventListener('canplay', () => {
                         loadingState.classList.add('hidden');
                         updateUI(s.activeIndex);
                     }, { once: true });
+                    mainVideo.load(); // Kickstart loading
                 },
                 slideChange: (s) => {
                     const autoplay = s.previousIndex !== s.activeIndex;
