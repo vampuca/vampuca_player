@@ -22,21 +22,39 @@
 
     .studio-branding{position:absolute;top:1rem;right:1rem;z-index:1600;display:flex;align-items:center;gap:.5rem}
     .studio-brand-block{background:rgba(0,0,0,.35);padding:.5rem .75rem;border-radius:.5rem;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid rgba(255,133,51,.25);box-shadow:0 8px 24px rgba(0,0,0,.25)}
-    .dropdown-button-container{background:rgba(0,0,0,.35);padding:.5rem;border-radius:.5rem;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid rgba(255,133,51,.25);position:relative;z-index:1601;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+
+    /* контейнер без рамки */
+    .dropdown-button-container{background:transparent;padding:0;border:none;position:relative;z-index:1601;box-shadow:none}
     .studio-name{color:hsl(14,100%,60%);font-weight:700;font-size:1.125rem;letter-spacing:.05em;text-shadow:0 0 10px rgba(255,133,51,.3)}
 
+    /* кнопка «главы» — как нижние */
     .dropdown-button{
-      background:none;border:none;color:#fff;cursor:pointer;padding:.25rem;border-radius:.25rem;transition:all .2s ease
+      background:rgba(0,0,0,.35);
+      -webkit-backdrop-filter:blur(12px) saturate(120%);
+      backdrop-filter:blur(12px) saturate(120%);
+      border:1px solid rgba(255,133,51,.25);
+      color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
+      padding:.5rem;border-radius:.85rem;min-width:44px;min-height:44px;
+      box-shadow:0 8px 24px rgba(0,0,0,.25);
+      transition:transform .15s ease,background .25s ease,border-color .25s ease,color .25s ease;
     }
-    .dropdown-button:hover,
-    .dropdown-button:active,
-    .dropdown-button.active{
-      color:hsl(14,100%,60%);
+    .dropdown-button:hover,.dropdown-button.active{
       background:rgba(255,133,51,.12);
-      border:1px solid rgba(255,133,51,.35);
+      border-color:rgba(255,133,51,.35);
+      color:hsl(14,100%,60%);
+      transform:translateY(-1px);
     }
+    .dropdown-button svg{width:20px;height:20px}
 
-    .dropdown-menu{position:absolute;top:100%;right:0;margin-top:.5rem;width:12rem;background:rgba(0,0,0,.35);color:#fff;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-radius:.5rem;border:1px solid rgba(255,255,255,.12);box-shadow:0 8px 32px rgba(0,0,0,.35);max-height:60vh;overflow-y:auto;z-index:1602;display:none;opacity:0;transform:translateY(-10px);transition:all .3s ease}
+    /* меню глав без рамки */
+    .dropdown-menu{
+      position:absolute;top:100%;right:0;margin-top:.5rem;width:12rem;
+      background:rgba(0,0,0,.35);color:#fff;
+      -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+      border-radius:.5rem;border:none;
+      box-shadow:0 8px 32px rgba(0,0,0,.35);
+      max-height:60vh;overflow-y:auto;z-index:1602;display:none;opacity:0;transform:translateY(-10px);transition:all .3s ease
+    }
     .dropdown-menu.visible{display:block!important;opacity:1!important;transform:translateY(0)!important}
     .chapter-list{padding:.5rem}
     .chapter-item{display:flex;justify-content:space-between;width:100%;padding:.5rem .75rem;border:none;background:transparent;color:#e5e7eb;cursor:pointer;border-radius:.375rem;font-size:.875rem;text-align:left;transition:background .2s ease,color .2s ease}
@@ -77,25 +95,22 @@
     .play-button:hover{background:rgba(255,133,51,.12);border-color:rgba(255,133,51,.35);color:hsl(14,100%,60%);transform:translateY(-1px)}
     .play-button svg{width:24px;height:24px}
 
-    /* ===== Volume slider: белый фон, оранжевый прогресс, оранжевый бегунок ===== */
+    /* Volume slider: белый трек + оранжевый прогресс + оранжевый бегунок */
     .volume-control{display:flex;align-items:center;gap:.5rem}
     .volume-slider{
       --vol: 100%;
       width:110px;
       appearance:none; -webkit-appearance:none;
       height:2px; border-radius:999px;
-      /* градиент даёт «оранжевый до бегунка / белый после» */
       background:linear-gradient(to right, hsl(14,100%,60%) var(--vol), rgba(255,255,255,.65) var(--vol));
       outline:none; cursor:pointer;
     }
-    /* WebKit track transparent — показываем градиент вводимого фона */
     .volume-slider::-webkit-slider-runnable-track{height:2px;background:transparent;border-radius:999px}
     .volume-slider::-webkit-slider-thumb{
       -webkit-appearance:none; appearance:none;
       width:12px;height:12px;border:none;border-radius:50%;
       background:hsl(14,100%,60%); margin-top:-5px;
     }
-    /* Firefox: отдельные псевдоэлементы прогресса и трека */
     .volume-slider::-moz-range-track{height:2px;background:rgba(255,255,255,.65);border-radius:999px}
     .volume-slider::-moz-range-progress{height:2px;background:hsl(14,100%,60%);border-radius:999px}
     .volume-slider::-moz-range-thumb{width:12px;height:12px;border:none;border-radius:50%;background:hsl(14,100%,60%)}
@@ -107,14 +122,22 @@
     .loading-text{text-align:center;color:#fff;font-size:.875rem;margin-top:1rem}
     .hidden{display:none}
 
+    /* Системное сообщение (toast) — фикс сверху, поверх всего */
+    .sys-toast{
+      position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 12px);transform:translateX(-50%) translateY(-6px);
+      background:rgba(0,0,0,.85);color:#fff;border-radius:9999px;padding:8px 12px;font-size:14px;line-height:1;
+      z-index:2147483647;opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;
+      box-shadow:0 8px 28px rgba(0,0,0,.35);
+    }
+    .sys-toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
+
     .fs-polyfill{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;z-index:999999!important}
-    .fs-toast{position:absolute;left:50%;bottom:5.5rem;transform:translateX(-50%);background:rgba(0,0,0,.35);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid rgba(255,133,51,.25);color:#fff;border-radius:.5rem;padding:.5rem .75rem;opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:2100}
-    .fs-toast.visible{opacity:1}
 
     @media (max-width:768px){
       .controls-container{padding:2rem .5rem .5rem}
       .controls-panel{padding:.5rem;gap:.5rem}
       .control-button,.volume-button,.fullscreen-button{padding:.5rem;min-width:44px;min-height:44px;border-radius:.75rem}
+      .dropdown-button{min-width:44px;min-height:44px}
       .volume-slider{width:100px}
     }
   </style>
@@ -159,6 +182,7 @@
             <svg class="control-icon" viewBox="0 0 24 24"><path d="M19 12H5m7-7l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2"/></svg>
           </button>
 
+          <!-- Play скрывается на первом/последнем слайде логикой JS -->
           <button id="playBtn" class="control-button play-button" aria-label="Play/Pause">
             <svg id="playIcon" class="control-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8,5.14V19.14L19,12.14L8,5.14Z"/></svg>
             <svg id="pauseIcon" class="control-icon hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M14,19H18V5H14M6,19H10V5H6V19Z"/></svg>
@@ -183,11 +207,12 @@
             <svg id="fullscreenExitIcon" class="control-icon hidden" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M4 14h6v6m-6-6l7 7m3-17h6v6m-6-6l7 7"/></svg>
           </button>
         </div>
-
-        <div id="fsToast" class="fs-toast" role="status" aria-live="polite"></div>
       </div>
     </div>
   </div>
+
+  <!-- сервисное сообщение поверх всего -->
+  <div id="serviceToast" class="sys-toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
   <script>
@@ -196,7 +221,10 @@
     document.addEventListener('DOMContentLoaded', () => {
       const videoSources = [
         { src: isMobile() ? 'KLKT_TITLE_mobile.m4v' : 'KLKT_TITLE.m4v', title: 'Title' },
-        ...Array.from({ length: 20 }, (_, i) => ({ src: isMobile() ? `KLKT_${i+1}_mobile.m4v` : `KLKT_${i+1}.m4v`, title: `Chapter ${i+1}` })),
+        ...Array.from({ length: 20 }, (_, i) => ({
+          src: isMobile() ? `KLKT_${i+1}_mobile.m4v` : `KLKT_${i+1}.m4v`,
+          title: `Chapter ${i+1}`
+        })),
         { src: isMobile() ? 'KLKT_END_mobile.m4v' : 'KLKT_END.m4v', title: 'End' }
       ];
 
@@ -223,11 +251,11 @@
       const mutedIcon = document.getElementById('mutedIcon');
       const fullscreenEnterIcon = document.getElementById('fullscreenEnterIcon');
       const fullscreenExitIcon = document.getElementById('fullscreenExitIcon');
-      const fsToast = document.getElementById('fsToast');
+      const serviceToast = document.getElementById('serviceToast');
 
       let isPlaying = false;
       let isMuted = false;
-      let swiper;
+      let swiper;            // <= ВНЕФУНКЦИОННАЯ ПЕРЕМЕННАЯ
       let currentLoadId = 0;
       let hideTimeout;
       let wakeLock = null;
@@ -235,11 +263,11 @@
       const fsCapable = () => !!(playerContainer.requestFullscreen && document.fullscreenEnabled);
       const isFsNow = () => !!document.fullscreenElement || playerContainer.classList.contains('fs-polyfill');
 
-      function showFsToast(msg){
-        if(!fsToast) return;
-        fsToast.textContent = msg;
-        fsToast.classList.add('visible');
-        setTimeout(()=>fsToast.classList.remove('visible'), 1600);
+      function showToast(msg){
+        if(!serviceToast) return;
+        serviceToast.textContent = msg;
+        serviceToast.classList.add('visible');
+        setTimeout(()=>serviceToast.classList.remove('visible'), 1600);
       }
       function pseudoFullscreenOn(){
         document.documentElement.style.overflow='hidden';
@@ -257,22 +285,22 @@
         if (isFsNow()){
           if (document.fullscreenElement) document.exitFullscreen?.();
           if (playerContainer.classList.contains('fs-polyfill')) exitPseudoFullscreen();
-          showFsToast('Оконный режим');
+          showToast('Оконный режим');
           updateUI(swiper.activeIndex);
           return;
         }
         if (!fsCapable()){
           pseudoFullscreenOn();
-          showFsToast('Полноэкранный режим недоступен в этом браузере.');
+          showToast('Полноэкранный режим недоступен в этом браузере.');
           updateUI(swiper.activeIndex);
           return;
         }
         playerContainer.requestFullscreen().then(()=>{
-          showFsToast('Полноэкранный режим');
+          showToast('Полноэкранный режим');
           updateUI(swiper.activeIndex);
         }).catch(()=>{
           pseudoFullscreenOn();
-          showFsToast('Полноэкранный режим недоступен в этом браузере.');
+          showToast('Полноэкранный режим недоступен в этом браузере.');
           updateUI(swiper.activeIndex);
         });
       }
@@ -292,7 +320,6 @@
       }
 
       function setSliderVisualByValue(val){
-        // val: 0..1
         const pct = (val*100).toFixed(0) + '%';
         volumeSlider.style.setProperty('--vol', pct);
       }
@@ -355,18 +382,8 @@
         const goNext=()=>swiper.slideNext();
 
         playBtn.addEventListener('click', ()=>{ isPlaying=!isPlaying; if(isPlaying) mainVideo.play(); else mainVideo.pause(); updateUI(swiper.activeIndex); });
-        muteBtn.addEventListener('click', ()=>{
-          isMuted=!isMuted; mainVideo.muted=isMuted;
-          if(!isMuted) mainVideo.removeAttribute('muted'); else mainVideo.setAttribute('muted','');
-          updateUI(swiper.activeIndex);
-        });
-        volumeSlider.addEventListener('input', (e)=>{
-          const v=e.target.value/100;
-          mainVideo.volume=v;
-          isMuted=(v===0); mainVideo.muted=isMuted;
-          setSliderVisualByValue(v); // динамически красим трек
-          updateUI(swiper.activeIndex);
-        });
+        muteBtn.addEventListener('click', ()=>{ isMuted=!isMuted; mainVideo.muted=isMuted; if(!isMuted) mainVideo.removeAttribute('muted'); else mainVideo.setAttribute('muted',''); updateUI(swiper.activeIndex); });
+        volumeSlider.addEventListener('input', (e)=>{ const v=e.target.value/100; mainVideo.volume=v; isMuted=(v===0); mainVideo.muted=isMuted; setSliderVisualByValue(v); updateUI(swiper.activeIndex); });
 
         fullscreenBtn.addEventListener('click', ()=>{ enterFullscreenSmart(); });
 
@@ -379,7 +396,7 @@
         playerContainer.addEventListener('touchend', (e)=>{ const dx=Math.abs(e.changedTouches[0].clientX-tX), dy=Math.abs(e.changedTouches[0].clientY-tY); if(dx<10&&dy<10) showControls(); }, { passive:true, capture:true });
         playerContainer.addEventListener('click', ()=>showControls(), { capture:true });
 
-        // dropdown (подсветка кнопки при открытом меню)
+        // dropdown: подсветка кнопки при открытом меню
         const toggleDropdown=(show)=>{
           dropdownMenu.classList.toggle('visible', show);
           dropdownButton.classList.toggle('active', show);
@@ -405,8 +422,7 @@
               if(isMobile()) mainVideo.src = 'KLKT_TITLE_mobile.m4v';
               mainVideo.addEventListener('canplay', ()=>{ loadingState.classList.add('hidden'); updateUI(s.activeIndex); }, { once:true });
               mainVideo.load();
-              // первичная покраска трека под текущее значение (100%)
-              setSliderVisualByValue(1);
+              setSliderVisualByValue(mainVideo.volume || 1);
             },
             slideChange:(s)=>{ const autoplay = s.previousIndex !== s.activeIndex; loadVideo(s.activeIndex, autoplay); }
           }
