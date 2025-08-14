@@ -38,21 +38,52 @@
 
     .slide-counter{position:absolute;top:1rem;left:1rem;z-index:1600;background:rgba(0,0,0,.35);padding:.5rem 1rem;border-radius:.5rem;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);font-size:.875rem;font-weight:500}
 
+    /* Нижняя область — контейнер и панель прозрачные */
     .controls-container{position:absolute;left:0;right:0;bottom:0;background:transparent;border-top:none;padding:1rem;transition:all .3s ease;z-index:2000;max-width:100vw;overflow-x:auto;box-shadow:none}
     .controls-container.hidden{opacity:0;transform:translateY(100%);pointer-events:none}
-    .controls-panel{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:1rem;padding:1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;border:none;max-width:100vw;flex-wrap:wrap;box-shadow:none}
-    .controls-left,.controls-right{display:flex;align-items:center;gap:1rem}
-    .control-button,.volume-button,.fullscreen-button{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s ease}
-    .control-button:hover,.volume-button:hover,.fullscreen-button:hover{color:hsl(14,100%,60%);background:rgba(255,133,51,.1);border-color:rgba(255,133,51,.3)}
-    .control-button{padding:.75rem;border-radius:.75rem;min-width:3rem;min-height:3rem}
-    .volume-button{padding:.5rem;border-radius:.5rem}
-    .fullscreen-button{padding:.75rem;border-radius:.75rem}
+    .controls-panel{
+      background:transparent;
+      -webkit-backdrop-filter:none;backdrop-filter:none;
+      border-radius:1rem;padding:1rem;
+      display:flex;align-items:center;justify-content:space-between;gap:1rem;
+      border:none;max-width:100vw;flex-wrap:wrap;box-shadow:none
+    }
+
+    /* Кнопки — индивидуальные «пилюли» с тёмным стеклом и сильным блюром */
+    .controls-left,.controls-right{display:flex;align-items:center;gap:.75rem}
+    .control-button,.volume-button,.fullscreen-button{
+      background:rgba(0,0,0,.58);
+      -webkit-backdrop-filter:blur(18px) saturate(120%);
+      backdrop-filter:blur(18px) saturate(120%);
+      border:1px solid rgba(255,255,255,.16);
+      color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center;
+      transition:transform .15s ease, background .25s ease, border-color .25s ease;
+      padding:.75rem; border-radius:.85rem; min-width:3rem; min-height:3rem;
+      box-shadow:0 6px 18px rgba(0,0,0,.45);
+    }
+    .control-button:hover,.volume-button:hover,.fullscreen-button:hover{
+      background:rgba(0,0,0,.68);
+      border-color:rgba(255,255,255,.24);
+      transform:translateY(-1px);
+    }
+    .control-button:active,.volume-button:active,.fullscreen-button:active{
+      transform:translateY(0);
+    }
+
     .volume-control{display:flex;align-items:center;gap:.5rem}
     .volume-slider{width:80px;appearance:none;height:4px;background:rgba(255,255,255,.3);border-radius:2px;outline:none;cursor:pointer}
     .volume-slider::-webkit-slider-thumb{appearance:none;width:12px;height:12px;background:hsl(14,100%,60%);border-radius:50%;cursor:pointer}
+
     .control-icon{width:20px;height:20px}
-    .play-button{background:linear-gradient(135deg,hsl(14,100%,60%) 0%,hsl(14,100%,55%) 100%)!important;color:#fff!important;padding:1rem!important;border-radius:50%!important;border:none!important}
-    .play-button:hover{background:linear-gradient(135deg,hsl(14,100%,55%) 0%,hsl(14,100%,50%) 100%)!important;transform:translateY(-2px)}
+
+    /* Play — оставляем фирменный градиент, но усиливаем «пилюлю» */
+    .play-button{
+      position:relative; isolation:isolate;
+      background:linear-gradient(135deg,hsl(14,100%,60%) 0%,hsl(14,100%,55%) 100%)!important;
+      color:#fff!important; padding:1rem!important; border-radius:50%!important; border:none!important;
+      box-shadow:0 10px 24px rgba(255,133,51,.35), 0 8px 22px rgba(0,0,0,.45);
+    }
+    .play-button:hover{transform:translateY(-2px)}
     .play-button svg{width:24px!important;height:24px!important}
 
     .loading-state{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.85);z-index:3000}
@@ -69,14 +100,14 @@
     @media (max-width:768px){
       .controls-container{padding:2rem .5rem .5rem}
       .controls-panel{padding:.5rem;gap:.5rem}
-      .control-button{padding:.5rem;min-width:44px;min-height:44px}
+      .control-button,.volume-button,.fullscreen-button{padding:.5rem;min-width:44px;min-height:44px;border-radius:.75rem}
       .play-button{padding:.75rem!important}
       .play-button svg{width:20px!important;height:20px!important}
       .volume-slider{width:60px}
       .fullscreen-button{display:inline-flex}
     }
     .chapter-item:hover{background:rgba(255,255,255,.08);}
-</style>
+  </style>
 </head>
 <body>
   <div class="player-container" id="playerContainer">
@@ -94,7 +125,7 @@
 
     <div class="slide-counter"><span id="slideCounter"></span></div>
 
-    <!-- Главное видео (кликов не перехватывает) -->
+    <!-- Главное видео -->
     <video id="mainVideo" class="main-video"
       preload="auto"
       playsinline webkit-playsinline
@@ -224,7 +255,6 @@
       function fitToInnerHeight(){
         const h = window.visualViewport?.height || window.innerHeight;
         playerContainer.style.height = h + 'px';
-        // чтобы видео подстроилось моментально
         document.querySelectorAll('.main-video').forEach(v => v.style.height = h + 'px');
       }
       window.addEventListener('resize', fitToInnerHeight);
@@ -338,7 +368,7 @@
         mainVideo.addEventListener('pause', ()=>{ isPlaying = false; keepAwake(false); updateUI(swiper.activeIndex); });
         document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState==='visible' && isPlaying) keepAwake(true); });
 
-        // Автопереход к следующему ролика после завершения (опционально)
+        // Автопереход к следующему ролика после завершения
         mainVideo.addEventListener('ended', ()=>{ if (swiper.activeIndex < videoSources.length-1) swiper.slideNext(); });
       }
 
