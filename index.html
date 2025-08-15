@@ -8,9 +8,13 @@
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     html,body{height:100%}
-    body{font-family:'Inter',-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#000;color:#fff;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+    body{
+      font-family:'Inter',-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      background:#000;color:#fff;overflow:hidden;
+      -webkit-user-select:none;user-select:none;-webkit-touch-callout:none
+    }
 
-    .player-container{position:fixed;inset:0;width:100vw;height:100dvh;background:#000;overflow:hidden;touch-action:pan-y;overscroll-behavior-x:contain;overscroll-behavior-y:contain}
+    .player-container{position:fixed;inset:0;width:100vw;height:100dvh;background:#000;overflow:hidden;touch-action:pan-y;overscroll-behavior:contain}
     @supports not (height:100dvh){.player-container{height:100vh}}
     .player-container{height:100dvh;height:100svh;height:-webkit-fill-available}
 
@@ -23,36 +27,44 @@
     .studio-branding{position:absolute;top:1rem;right:1rem;z-index:1600;display:flex;align-items:center;gap:.5rem}
     .studio-brand-block{background:rgba(0,0,0,.35);padding:.5rem .75rem;border-radius:.5rem;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid rgba(255,133,51,.25);box-shadow:0 8px 24px rgba(0,0,0,.25)}
 
-    /* контейнер без рамки */
     .dropdown-button-container{background:transparent;padding:0;border:none;position:relative;z-index:1601;box-shadow:none}
     .studio-name{color:hsl(14,100%,60%);font-weight:700;font-size:1.125rem;letter-spacing:.05em;text-shadow:0 0 10px rgba(255,133,51,.3)}
 
     /* кнопка «главы» — как нижние */
-    .dropdown-button{
+    .dropdown-button,
+    .control-button,.volume-button,.fullscreen-button{
       background:rgba(0,0,0,.35);
       -webkit-backdrop-filter:blur(12px) saturate(120%);
       backdrop-filter:blur(12px) saturate(120%);
       border:1px solid rgba(255,133,51,.25);
       color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
-      padding:.5rem;border-radius:.85rem;min-width:44px;min-height:44px;
+      padding:.75rem;border-radius:.85rem;min-width:3rem;min-height:3rem;
       box-shadow:0 8px 24px rgba(0,0,0,.25);
       transition:transform .15s ease,background .25s ease,border-color .25s ease,color .25s ease;
+      -webkit-tap-highlight-color: transparent; outline:none
     }
-    .dropdown-button:hover,.dropdown-button.active{
-      background:rgba(255,133,51,.12);
-      border-color:rgba(255,133,51,.35);
-      color:hsl(14,100%,60%);
-      transform:translateY(-1px);
-    }
-    .dropdown-button svg{width:20px;height:20px}
+    .dropdown-button{padding:.5rem;min-width:44px;min-height:44px}
+    .control-icon,.dropdown-button svg{width:20px;height:20px}
 
-    /* меню глав без рамки */
+    /* hover/active — отключаем на тачах, чтобы не «залипало» */
+    @media (hover:hover) and (pointer:fine){
+      .dropdown-button:hover,.dropdown-button.active,
+      .control-button:hover,.volume-button:hover,.fullscreen-button:hover{
+        background:rgba(255,133,51,.12);border-color:rgba(255,133,51,.35);color:hsl(14,100%,60%);transform:translateY(-1px)
+      }
+    }
+    .is-touch .dropdown-button:hover,
+    .is-touch .control-button:hover,
+    .is-touch .volume-button:hover,
+    .is-touch .fullscreen-button:hover{
+      background:rgba(0,0,0,.35);border-color:rgba(255,133,51,.25);color:#fff;transform:none
+    }
+
     .dropdown-menu{
       position:absolute;top:100%;right:0;margin-top:.5rem;width:12rem;
       background:rgba(0,0,0,.35);color:#fff;
       -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
-      border-radius:.5rem;border:none;
-      box-shadow:0 8px 32px rgba(0,0,0,.35);
+      border-radius:.5rem;border:none;box-shadow:0 8px 32px rgba(0,0,0,.35);
       max-height:60vh;overflow-y:auto;z-index:1602;display:none;opacity:0;transform:translateY(-10px);transition:all .3s ease
     }
     .dropdown-menu.visible{display:block!important;opacity:1!important;transform:translateY(0)!important}
@@ -65,52 +77,22 @@
     .controls-container{position:absolute;left:0;right:0;bottom:0;background:transparent;padding:1rem;transition:all .3s ease;z-index:2000;max-width:100vw;overflow-x:auto}
     .controls-container.hidden{opacity:0;transform:translateY(100%);pointer-events:none}
     .controls-panel{background:transparent;border-radius:1rem;padding:1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;border:none;max-width:100vw;flex-wrap:wrap}
-
     .controls-left,.controls-right{display:flex;align-items:center;gap:.75rem}
     .controls-right{flex-wrap:nowrap}
 
-    .control-button,.volume-button,.fullscreen-button{
-      background:rgba(0,0,0,.35);
-      -webkit-backdrop-filter:blur(12px) saturate(120%);
-      backdrop-filter:blur(12px) saturate(120%);
-      border:1px solid rgba(255,133,51,.25);
-      color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
-      transition:transform .15s ease,background .25s ease,border-color .25s ease,color .25s ease;
-      padding:.75rem;border-radius:.85rem;min-width:3rem;min-height:3rem;
-      box-shadow:0 8px 24px rgba(0,0,0,.25)
-    }
-    .control-button:hover,.volume-button:hover,.fullscreen-button:hover{background:rgba(255,133,51,.12);border-color:rgba(255,133,51,.35);color:hsl(14,100%,60%);transform:translateY(-1px)}
-    .control-icon{width:20px;height:20px}
-
-    .play-button{
-      background:rgba(0,0,0,.35);
-      -webkit-backdrop-filter:blur(12px) saturate(120%);
-      backdrop-filter:blur(12px) saturate(120%);
-      border:1px solid rgba(255,133,51,.25);
-      color:#fff;
-      padding:.75rem;border-radius:.85rem;min-width:3rem;min-height:3rem;
-      box-shadow:0 8px 24px rgba(0,0,0,.25);
-      transition:transform .15s ease, background .25s ease, border-color .25s ease, color .25s ease;
-    }
-    .play-button:hover{background:rgba(255,133,51,.12);border-color:rgba(255,133,51,.35);color:hsl(14,100%,60%);transform:translateY(-1px)}
-    .play-button svg{width:24px;height:24px}
+    .play-button{ /* как остальные */ }
 
     /* Volume slider: белый трек + оранжевый прогресс + оранжевый бегунок */
     .volume-control{display:flex;align-items:center;gap:.5rem}
     .volume-slider{
       --vol: 100%;
-      width:110px;
-      appearance:none; -webkit-appearance:none;
+      width:110px;appearance:none; -webkit-appearance:none;
       height:2px; border-radius:999px;
       background:linear-gradient(to right, hsl(14,100%,60%) var(--vol), rgba(255,255,255,.65) var(--vol));
       outline:none; cursor:pointer;
     }
     .volume-slider::-webkit-slider-runnable-track{height:2px;background:transparent;border-radius:999px}
-    .volume-slider::-webkit-slider-thumb{
-      -webkit-appearance:none; appearance:none;
-      width:12px;height:12px;border:none;border-radius:50%;
-      background:hsl(14,100%,60%); margin-top:-5px;
-    }
+    .volume-slider::-webkit-slider-thumb{-webkit-appearance:none; appearance:none;width:12px;height:12px;border:none;border-radius:50%;background:hsl(14,100%,60%); margin-top:-5px}
     .volume-slider::-moz-range-track{height:2px;background:rgba(255,255,255,.65);border-radius:999px}
     .volume-slider::-moz-range-progress{height:2px;background:hsl(14,100%,60%);border-radius:999px}
     .volume-slider::-moz-range-thumb{width:12px;height:12px;border:none;border-radius:50%;background:hsl(14,100%,60%)}
@@ -122,12 +104,12 @@
     .loading-text{text-align:center;color:#fff;font-size:.875rem;margin-top:1rem}
     .hidden{display:none}
 
-    /* Системное сообщение (toast) — фикс сверху, поверх всего */
+    /* System toast (top, above all) */
     .sys-toast{
       position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 12px);transform:translateX(-50%) translateY(-6px);
       background:rgba(0,0,0,.85);color:#fff;border-radius:9999px;padding:8px 12px;font-size:14px;line-height:1;
       z-index:2147483647;opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;
-      box-shadow:0 8px 28px rgba(0,0,0,.35);
+      box-shadow:0 8px 28px rgba(0,0,0,.35)
     }
     .sys-toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -136,8 +118,7 @@
     @media (max-width:768px){
       .controls-container{padding:2rem .5rem .5rem}
       .controls-panel{padding:.5rem;gap:.5rem}
-      .control-button,.volume-button,.fullscreen-button{padding:.5rem;min-width:44px;min-height:44px;border-radius:.75rem}
-      .dropdown-button{min-width:44px;min-height:44px}
+      .dropdown-button,.control-button,.volume-button,.fullscreen-button{padding:.5rem;min-width:44px;min-height:44px;border-radius:.75rem}
       .volume-slider{width:100px}
     }
   </style>
@@ -148,11 +129,9 @@
       <div class="studio-brand-block"><span class="studio-name">VAMPUCA AI</span></div>
       <div class="dropdown-button-container">
         <button class="dropdown-button" id="dropdownButton" aria-label="Chapters">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
         </button>
-        <div id="dropdownMenu" class="dropdown-menu">
-          <div class="chapter-list" id="chapterList"></div>
-        </div>
+        <div id="dropdownMenu" class="dropdown-menu"><div class="chapter-list" id="chapterList"></div></div>
       </div>
     </div>
 
@@ -211,7 +190,7 @@
     </div>
   </div>
 
-  <!-- сервисное сообщение поверх всего -->
+  <!-- system toast -->
   <div id="serviceToast" class="sys-toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
@@ -219,6 +198,11 @@
     const isMobile = () => window.innerWidth <= 768;
 
     document.addEventListener('DOMContentLoaded', () => {
+      // mark touch to disable hover effects that "stick"
+      if ('ontouchstart' in window || navigator.maxTouchPoints>0) {
+        document.documentElement.classList.add('is-touch');
+      }
+
       const videoSources = [
         { src: isMobile() ? 'KLKT_TITLE_mobile.m4v' : 'KLKT_TITLE.m4v', title: 'Title' },
         ...Array.from({ length: 20 }, (_, i) => ({
@@ -255,7 +239,7 @@
 
       let isPlaying = false;
       let isMuted = false;
-      let swiper;            // <= ВНЕФУНКЦИОННАЯ ПЕРЕМЕННАЯ
+      let swiper;
       let currentLoadId = 0;
       let hideTimeout;
       let wakeLock = null;
@@ -285,22 +269,20 @@
         if (isFsNow()){
           if (document.fullscreenElement) document.exitFullscreen?.();
           if (playerContainer.classList.contains('fs-polyfill')) exitPseudoFullscreen();
-          showToast('Оконный режим');
-          updateUI(swiper.activeIndex);
+          updateUI(swiper.activeIndex); // no toast on exit
           return;
         }
         if (!fsCapable()){
           pseudoFullscreenOn();
-          showToast('Полноэкранный режим недоступен в этом браузере.');
+          showToast('Fullscreen is not available in this browser.');
           updateUI(swiper.activeIndex);
           return;
         }
         playerContainer.requestFullscreen().then(()=>{
-          showToast('Полноэкранный режим');
-          updateUI(swiper.activeIndex);
+          updateUI(swiper.activeIndex); // no success toast
         }).catch(()=>{
           pseudoFullscreenOn();
-          showToast('Полноэкранный режим недоступен в этом браузере.');
+          showToast('Fullscreen is not available in this browser.');
           updateUI(swiper.activeIndex);
         });
       }
@@ -313,7 +295,7 @@
         }catch(_){}
       }
 
-      function showControls(){
+      function showControls(resetOnly=false){
         controlsContainer.classList.remove('hidden');
         clearTimeout(hideTimeout);
         hideTimeout = setTimeout(()=>controlsContainer.classList.add('hidden'), 3000);
@@ -377,9 +359,18 @@
         const next=index+1; if(next<videoSources.length){ preloadVideo.src=videoSources[next].src; preloadVideo.load(); }
       }
 
+      function blurOnEnd(el){
+        ['click','touchend','mouseup','pointerup'].forEach(evt=>{
+          el.addEventListener(evt, ()=>{ el.blur?.(); showControls(); }, {passive:true});
+        });
+      }
+
       function setupEventListeners(){
         const goPrev=()=>swiper.slidePrev();
         const goNext=()=>swiper.slideNext();
+
+        // bind blur to prevent "stuck" active states
+        [prevBtn, playBtn, nextBtn, muteBtn, fullscreenBtn, dropdownButton].forEach(blurOnEnd);
 
         playBtn.addEventListener('click', ()=>{ isPlaying=!isPlaying; if(isPlaying) mainVideo.play(); else mainVideo.pause(); updateUI(swiper.activeIndex); });
         muteBtn.addEventListener('click', ()=>{ isMuted=!isMuted; mainVideo.muted=isMuted; if(!isMuted) mainVideo.removeAttribute('muted'); else mainVideo.setAttribute('muted',''); updateUI(swiper.activeIndex); });
@@ -391,15 +382,14 @@
         nextBtn.addEventListener('click', goNext);
 
         let tX=0,tY=0;
-        playerContainer.addEventListener('mousemove', showControls, { passive:true, capture:true });
-        playerContainer.addEventListener('touchstart', (e)=>{ tX=e.touches[0].clientX; tY=e.touches[0].clientY; }, { passive:true, capture:true });
+        playerContainer.addEventListener('mousemove', ()=>showControls(), { passive:true, capture:true });
+        playerContainer.addEventListener('touchstart', (e)=>{ tX=e.touches[0].clientX; tY=e.touches[0].clientY; showControls(); }, { passive:true, capture:true });
         playerContainer.addEventListener('touchend', (e)=>{ const dx=Math.abs(e.changedTouches[0].clientX-tX), dy=Math.abs(e.changedTouches[0].clientY-tY); if(dx<10&&dy<10) showControls(); }, { passive:true, capture:true });
         playerContainer.addEventListener('click', ()=>showControls(), { capture:true });
 
-        // dropdown: подсветка кнопки при открытом меню
         const toggleDropdown=(show)=>{
           dropdownMenu.classList.toggle('visible', show);
-          dropdownButton.classList.toggle('active', show);
+          dropdownButton.classList.toggle('active', show && !document.documentElement.classList.contains('is-touch') ); // активную подсветку оставим только на десктопе
         };
         dropdownButton.addEventListener('click', (e)=>{ e.stopPropagation(); toggleDropdown(!dropdownMenu.classList.contains('visible')); showControls(); });
         dropdownMenu.addEventListener('click', (e)=>e.stopPropagation());
