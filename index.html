@@ -30,7 +30,7 @@
     .dropdown-button-container{background:transparent;padding:0;border:none;position:relative;z-index:1601;box-shadow:none}
     .studio-name{color:hsl(14,100%,60%);font-weight:700;font-size:1.125rem;letter-spacing:.05em;text-shadow:0 0 10px rgba(255,133,51,.3)}
 
-    /* кнопка «главы» — как нижние */
+    /* кнопка «главы» + низ — стеклянные */
     .dropdown-button,
     .control-button,.volume-button,.fullscreen-button{
       background:rgba(0,0,0,.35);
@@ -46,7 +46,7 @@
     .dropdown-button{padding:.5rem;min-width:44px;min-height:44px}
     .control-icon,.dropdown-button svg{width:20px;height:20px}
 
-    /* hover/active — отключаем на тачах, чтобы не «залипало» */
+    /* hover — отключаем на тачах, чтобы не «залипало» */
     @media (hover:hover) and (pointer:fine){
       .dropdown-button:hover,.dropdown-button.active,
       .control-button:hover,.volume-button:hover,.fullscreen-button:hover{
@@ -60,6 +60,7 @@
       background:rgba(0,0,0,.35);border-color:rgba(255,133,51,.25);color:#fff;transform:none
     }
 
+    /* меню глав без лишней рамки */
     .dropdown-menu{
       position:absolute;top:100%;right:0;margin-top:.5rem;width:12rem;
       background:rgba(0,0,0,.35);color:#fff;
@@ -79,8 +80,6 @@
     .controls-panel{background:transparent;border-radius:1rem;padding:1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;border:none;max-width:100vw;flex-wrap:wrap}
     .controls-left,.controls-right{display:flex;align-items:center;gap:.75rem}
     .controls-right{flex-wrap:nowrap}
-
-    .play-button{ /* как остальные */ }
 
     /* Volume slider: белый трек + оранжевый прогресс + оранжевый бегунок */
     .volume-control{display:flex;align-items:center;gap:.5rem}
@@ -114,6 +113,18 @@
     .sys-toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
 
     .fs-polyfill{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;z-index:999999!important}
+
+    /* Мобилка — ландшафт: бренд прячется вместе с панелью */
+    @media (max-width:768px) and (orientation: landscape){
+      .studio-branding{transition:opacity .2s ease, transform .2s ease}
+      .branding-hidden{opacity:0;transform:translateY(-8px);pointer-events:none}
+    }
+
+    /* Мобилка — портрет: центрируем низ */
+    @media (max-width:768px) and (orientation: portrait){
+      .controls-panel{justify-content:center}
+      .controls-left,.controls-right{justify-content:center}
+    }
 
     @media (max-width:768px){
       .controls-container{padding:2rem .5rem .5rem}
@@ -198,7 +209,7 @@
     const isMobile = () => window.innerWidth <= 768;
 
     document.addEventListener('DOMContentLoaded', () => {
-      // mark touch to disable hover effects that "stick"
+      // помечаем тач-устройства, чтобы отключить hover
       if ('ontouchstart' in window || navigator.maxTouchPoints>0) {
         document.documentElement.classList.add('is-touch');
       }
@@ -236,6 +247,9 @@
       const fullscreenEnterIcon = document.getElementById('fullscreenEnterIcon');
       const fullscreenExitIcon = document.getElementById('fullscreenExitIcon');
       const serviceToast = document.getElementById('serviceToast');
+      const branding = document.querySelector('.studio-branding');
+
+      const isLandscape = () => window.matchMedia('(orientation: landscape)').matches;
 
       let isPlaying = false;
       let isMuted = false;
@@ -253,6 +267,7 @@
         serviceToast.classList.add('visible');
         setTimeout(()=>serviceToast.classList.remove('visible'), 1600);
       }
+
       function pseudoFullscreenOn(){
         document.documentElement.style.overflow='hidden';
         document.body.style.position='fixed';
@@ -265,25 +280,43 @@
         document.body.style.inset='';
         playerContainer.classList.remove('fs-polyfill');
       }
+
+      // MOBILE RULE: если FS недоступен — только тост, без смены иконок и без псевдо
       function enterFullscreenSmart(){
         if (isFsNow()){
           if (document.fullscreenElement) document.exitFullscreen?.();
           if (playerContainer.classList.contains('fs-polyfill')) exitPseudoFullscreen();
-          updateUI(swiper.activeIndex); // no toast on exit
-          return;
-        }
-        if (!fsCapable()){
-          pseudoFullscreenOn();
-          showToast('Fullscreen is not available in this browser.');
           updateUI(swiper.activeIndex);
           return;
         }
+        const mobile = isMobile();
+        const canFS = fsCapable();
+
+        if (!canFS){
+          if (mobile){
+            showToast('Fullscreen is not available in this browser.');
+            updateUI(swiper.activeIndex); // иконка остаётся "enter"
+            return;
+          } else {
+            // на десктопе — допускаем псевдо-FS
+            pseudoFullscreenOn();
+            showToast('Fullscreen is not available in this browser.');
+            updateUI(swiper.activeIndex);
+            return;
+          }
+        }
+
         playerContainer.requestFullscreen().then(()=>{
-          updateUI(swiper.activeIndex); // no success toast
-        }).catch(()=>{
-          pseudoFullscreenOn();
-          showToast('Fullscreen is not available in this browser.');
           updateUI(swiper.activeIndex);
+        }).catch(()=>{
+          if (mobile){
+            showToast('Fullscreen is not available in this browser.');
+            updateUI(swiper.activeIndex);
+          } else {
+            pseudoFullscreenOn();
+            showToast('Fullscreen is not available in this browser.');
+            updateUI(swiper.activeIndex);
+          }
         });
       }
 
@@ -295,10 +328,20 @@
         }catch(_){}
       }
 
-      function showControls(resetOnly=false){
+      function showControls(){
         controlsContainer.classList.remove('hidden');
+        // бренд-плашка прячется/показывается только на мобилке + landscape
+        if (isMobile() && isLandscape()) branding.classList.remove('branding-hidden');
+
         clearTimeout(hideTimeout);
-        hideTimeout = setTimeout(()=>controlsContainer.classList.add('hidden'), 3000);
+        hideTimeout = setTimeout(()=>{
+          if (dropdownMenu.classList.contains('visible')) {
+            showControls();
+            return;
+          }
+          controlsContainer.classList.add('hidden');
+          if (isMobile() && isLandscape()) branding.classList.add('branding-hidden');
+        }, 3000);
       }
 
       function setSliderVisualByValue(val){
@@ -369,7 +412,6 @@
         const goPrev=()=>swiper.slidePrev();
         const goNext=()=>swiper.slideNext();
 
-        // bind blur to prevent "stuck" active states
         [prevBtn, playBtn, nextBtn, muteBtn, fullscreenBtn, dropdownButton].forEach(blurOnEnd);
 
         playBtn.addEventListener('click', ()=>{ isPlaying=!isPlaying; if(isPlaying) mainVideo.play(); else mainVideo.pause(); updateUI(swiper.activeIndex); });
@@ -389,7 +431,7 @@
 
         const toggleDropdown=(show)=>{
           dropdownMenu.classList.toggle('visible', show);
-          dropdownButton.classList.toggle('active', show && !document.documentElement.classList.contains('is-touch') ); // активную подсветку оставим только на десктопе
+          dropdownButton.classList.toggle('active', show && !document.documentElement.classList.contains('is-touch'));
         };
         dropdownButton.addEventListener('click', (e)=>{ e.stopPropagation(); toggleDropdown(!dropdownMenu.classList.contains('visible')); showControls(); });
         dropdownMenu.addEventListener('click', (e)=>e.stopPropagation());
